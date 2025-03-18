@@ -12,8 +12,8 @@ import {
   FileChartColumnIncreasing,
   Sun,
   Moon,
+  LogOut,
 } from "lucide-react";
-
 import {
   Sidebar,
   SidebarContent,
@@ -23,11 +23,15 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarFooter, // Added SidebarFooter
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useAppSelector, useAppDispatch } from "@/redux/hooks";
+import { useLogoutMutation } from "@/redux/features/authApiSlice";
+import { logout as setLogout } from "@/redux/features/authSlice";
+import { usePathname } from "next/navigation";
 
 // Define menu item type
 interface MenuItem {
@@ -37,7 +41,7 @@ interface MenuItem {
   category?: string;
 }
 
-// Organized menu items with categories
+// Menu items with categories
 const menuItems: MenuItem[] = [
   { title: "Home", url: "/dashboard", icon: Home, category: "Main" },
   { title: "Inbox", url: "/inbox", icon: Inbox, category: "Main" },
@@ -58,8 +62,8 @@ const menuItems: MenuItem[] = [
   },
   { title: "Skills", url: "/skills", icon: BookOpen, category: "Learning" },
   {
-    title: "Quizzes",
-    url: "/all_quizzes",
+    title: "Past Questions",
+    url: "/quiz-app",
     icon: FileChartColumnIncreasing,
     category: "Learning",
   },
@@ -80,27 +84,58 @@ const groupedItems = menuItems.reduce((acc, item) => {
 }, {} as Record<string, MenuItem[]>);
 
 export function AppSidebar() {
+  const pathname = usePathname();
+  const dispatch = useAppDispatch();
+  const [logout] = useLogoutMutation();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  // Theme toggle handler
   const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    // Apply theme to document
+    setIsDarkMode((prev) => !prev);
     document.documentElement.classList.toggle("dark");
   };
 
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      await logout(undefined).unwrap();
+      dispatch(setLogout());
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  // Check if the current path is active
+  const isSelected = (url: string) => pathname === url;
+
   return (
-    <Sidebar variant="floating" collapsible="icon">
+    <Sidebar
+      variant="floating"
+      collapsible="icon"
+      className="bg-white dark:bg-gray-900"
+    >
       <SidebarContent>
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-full py-4">
           {Object.entries(groupedItems).map(([category, items]) => (
             <SidebarGroup key={category}>
-              <SidebarGroupLabel>{category}</SidebarGroupLabel>
+              <SidebarGroupLabel className="text-gray-700 dark:text-gray-300">
+                {category}
+              </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {items.map((item) => (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild tooltip={item.title}>
-                        <a href={item.url} className="flex items-center gap-2">
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={item.title}
+                        className={`flex items-center gap-3 py-2 px-3 rounded-lg transition-colors ${
+                          isSelected(item.url)
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
+                            : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                        }`}
+                      >
+                        <a href={item.url}>
                           <item.icon className="h-5 w-5" />
                           <span className="truncate">{item.title}</span>
                         </a>
@@ -114,17 +149,17 @@ export function AppSidebar() {
         </ScrollArea>
       </SidebarContent>
 
-      {/* Theme Toggle Footer */}
-      <SidebarFooter>
+      {/* Footer with Theme Toggle and Logout */}
+      <SidebarFooter className="border-t border-gray-200 dark:border-gray-700">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarTrigger />
+            <SidebarTrigger className="mb-2" />
             <SidebarMenuButton
               onClick={toggleTheme}
               tooltip={
                 isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"
               }
-              className="w-full justify-start"
+              className="w-full justify-start gap-3 py-2 px-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               {isDarkMode ? (
                 <Sun className="h-5 w-5" />
@@ -136,6 +171,44 @@ export function AppSidebar() {
               </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
+
+          {isAuthenticated ? (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={handleLogout}
+                tooltip="Log Out"
+                className="w-full justify-start gap-3 py-2 px-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                <LogOut className="h-5 w-5" />
+                <span className="truncate">Log Out</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ) : (
+            <>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className="w-full justify-start gap-3 py-2 px-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  <a href="/auth/login">
+                    <LogOut className="h-5 w-5" />
+                    <span className="truncate">Login</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className="w-full justify-start gap-3 py-2 px-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                >
+                  <a href="/auth/register">
+                    <Users className="h-5 w-5" />
+                    <span className="truncate">Register</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </>
+          )}
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>

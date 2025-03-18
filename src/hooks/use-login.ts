@@ -40,7 +40,7 @@ export default function useLogin() {
 				toast.success('Logged in');
 				setTimeout(() => {
 				  router.push('/quizapp');
-				}, 1500);  // Slight delay to ensure auth state is updated
+				}, 300);  // Slight delay to ensure auth state is updated
 			  })
 			  
 			.catch(() => {

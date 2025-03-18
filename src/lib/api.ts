@@ -1,59 +1,3 @@
-<<<<<<< Updated upstream
-import type { User } from "@/lib/types"
-
-// Mock API functions - these would connect to your backend in a real application
-
-export async function updateUserProfile(data: {
-  firstName: string
-  lastName: string
-  username: string
-  email: string
-}): Promise<User> {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        id: "1",
-        username: data.username,
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        profilePicture: "/placeholder.svg?height=200&width=200",
-        role: "Student",
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-      })
-    }, 1000)
-  })
-}
-
-export async function changeUserPassword(data: {
-  currentPassword: string
-  newPassword: string
-}): Promise<void> {
-  // Simulate API call
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // In a real app, this would validate the current password
-      // and update to the new password on the server
-      console.log(`Changing password from ${data.currentPassword} to ${data.newPassword}`);
-      resolve()
-    }, 1000)
-  })
-}
-
-export async function uploadProfilePicture(file: File): Promise<{ url: string }> {
-  // Simulate API call for file upload
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // In a real app, this would upload the file to a storage service
-      // and return the URL of the uploaded file
-      const fileUrl = URL.createObjectURL(file);
-      resolve({ url: fileUrl })
-    }, 1500)
-  })
-=======
 // Base API configuration and utility functions
 // const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/quizapi"
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
@@ -152,6 +96,5 @@ export const api = {
   // Get choices for a specific question
   getChoices: (category0: string, category1: string, quizFile: string, questionId: number) =>
     fetchApi<Choice[]>(`/${category0}/${category1}/${quizFile}/${questionId}/choices/`),
->>>>>>> Stashed changes
 }
 

@@ -32,7 +32,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
       } else {
         onLogin()
       }
-    }, 1500)
+    }, 300)
   }
 
   return (

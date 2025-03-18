@@ -8,14 +8,12 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
-// API response type
 interface UserResponse {
   username: string;
   status: "success" | "error";
   message?: string;
 }
 
-// Component props
 interface HeaderProps {
   apiEndpoint?: string;
   onSearch?: (term: string) => void;
@@ -23,7 +21,6 @@ interface HeaderProps {
   firstName?: string;
 }
 
-// Utility function to get time-based greeting
 const getTimeBasedGreeting = (): string => {
   const hour = new Date().getHours();
   if (hour < 12) return "Good Morning";
@@ -31,26 +28,34 @@ const getTimeBasedGreeting = (): string => {
   return "Good Evening";
 };
 
-// API utility function
-const fetchUsername = async (endpoint: string): Promise<UserResponse> => {
+const fetchUsername = async (
+  endpoint: string,
+  token?: string
+): Promise<UserResponse> => {
   const response = await fetch(endpoint, {
     method: "GET",
-    credentials: "include",
+    credentials: "include", // Include cookies if your JWT is stored in an HTTP-only cookie
     headers: {
       "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }), // Add JWT token if provided
     },
   });
 
   if (!response.ok) {
-    throw new Error("Failed to fetch username");
+    throw new Error(`Failed to fetch username: ${response.statusText}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  // Adjust this based on your backend's actual response shape
+  return {
+    username: data.username || "Unknown",
+    status: "success",
+    message: data.message,
+  };
 };
 
-
 const Header: React.FC<HeaderProps> = ({
-  apiEndpoint = "/api/user",
+  apiEndpoint = "http://localhost:8000/userapi/jwt/verify/",
   onSearch,
   onProfileClick,
   firstName,
@@ -60,13 +65,15 @@ const Header: React.FC<HeaderProps> = ({
   const [username, setUsername] = useState<string>("User");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [greeting, setGreeting] = useState<string>(getTimeBasedGreeting());
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Fetch username from backend
   const loadUsername = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await fetchUsername(apiEndpoint);
+      // Replace this with your actual JWT token retrieval logic
+      const token = localStorage.getItem("jwt_token") || ""; // Example: token from localStorage
+      const data = await fetchUsername(apiEndpoint, token);
       if (data.status === "success") {
         setUsername(data.username);
       } else {
@@ -87,19 +94,14 @@ const Header: React.FC<HeaderProps> = ({
     }
   }, [apiEndpoint, toast]);
 
-  // Update greeting every minute to handle time changes
   useEffect(() => {
     loadUsername();
-
     const updateGreeting = () => setGreeting(getTimeBasedGreeting());
-    updateGreeting(); // Initial set
-
-    // Update every minute
+    updateGreeting();
     const interval = setInterval(updateGreeting, 60000);
-    return () => clearInterval(interval); // Cleanup
+    return () => clearInterval(interval);
   }, [loadUsername]);
 
-  // Event handlers
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
@@ -109,17 +111,12 @@ const Header: React.FC<HeaderProps> = ({
     [onSearch]
   );
 
-  const handleFocus = useCallback(() => {
-    setIsFocused(true);
-  }, []);
-
-  const handleBlur = useCallback(() => {
-    setIsFocused(false);
-  }, []);
-
-  const handleProfileClick = useCallback(() => {
-    onProfileClick?.();
-  }, [onProfileClick]);
+  const handleFocus = useCallback(() => setIsFocused(true), []);
+  const handleBlur = useCallback(() => setIsFocused(false), []);
+  const handleProfileClick = useCallback(
+    () => onProfileClick?.(),
+    [onProfileClick]
+  );
 
   return (
     <header
@@ -130,15 +127,14 @@ const Header: React.FC<HeaderProps> = ({
       aria-busy={isLoading}
     >
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-        {/* Greeting Section */}
         <div className="flex-shrink-0">
           <h1
             className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
-            aria-label={`${greeting} ${firstName}`}
+            aria-label={`${greeting} ${firstName || username}`}
           >
             {greeting}{" "}
             <span className="bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
-              {isLoading ? "Loading..." : firstName}
+              {isLoading ? "Loading..." : firstName || username}
             </span>
             <span className="animate-wave">👋</span>
           </h1>
@@ -146,10 +142,7 @@ const Header: React.FC<HeaderProps> = ({
             Let’s explore new learning opportunities!
           </p>
         </div>
-
-        {/* Controls Section */}
-        <div className=" flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-          {/* Enhanced Search Bar */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
           <div className="relative w-full sm:w-72 transition-all duration-300">
             <Input
               type="text"
@@ -178,8 +171,6 @@ const Header: React.FC<HeaderProps> = ({
               )}
             />
           </div>
-
-          {/* Action Buttons */}
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
@@ -191,7 +182,7 @@ const Header: React.FC<HeaderProps> = ({
               <Bell size={18} className="text-gray-600 dark:text-gray-300" />
               <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
             </Button>
-            <Link href={"/profile"}>
+            <Link href="/profile">
               <Button
                 variant="ghost"
                 className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
@@ -202,7 +193,6 @@ const Header: React.FC<HeaderProps> = ({
                 <span className="font-medium">Profile</span>
               </Button>
             </Link>
-
             <Button
               variant="outline"
               size="icon"
@@ -222,7 +212,3 @@ const Header: React.FC<HeaderProps> = ({
 Header.displayName = "Header";
 
 export default Header;
-
-function setError(errorMessage: string) {
-  console.error(errorMessage);
-}
