@@ -115,7 +115,7 @@ export default function Header() {
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-black dark:text-white">
+              <h1 className=" rounded-full text-2xl font-bold text-black dark:text-white">
                 {greeting}, {user?.first_name || "User"} !
                 <span className="ml-2 wave">👋</span>
               </h1>

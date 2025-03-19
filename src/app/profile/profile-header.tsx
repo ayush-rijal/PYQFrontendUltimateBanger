@@ -4,15 +4,12 @@ import { getInitials } from "@/lib/utils";
 import { useRetrieveUserQuery } from "@/redux/features/authApiSlice";
 import { Spinner } from "@/components/common";
 
-// interface Config {
-//   label: string;
-//   value: string | undefined;
-// }
-interface ProfileHeaderProps {
-  config: object;
+interface Config {
+  label: string;
+  value: string | undefined;
 }
 
-export function ProfileHeader({ config }: ProfileHeaderProps) {
+export function ProfileHeader() {
   const { data: user, isLoading, isFetching } = useRetrieveUserQuery();
 
   if (isLoading || isFetching) {
@@ -27,9 +24,9 @@ export function ProfileHeader({ config }: ProfileHeaderProps) {
     return <p className="text-center text-red-500">User data not available</p>;
   }
 
-  const config: [] = [
-    { label: "First Name", value: user.firstName },
-    { label: "Last Name", value: user.lastName },
+  const config: Config[] =[
+    { label: "First Name", value: user.first_name },
+    { label: "Last Name", value: user.last_name },
     { label: "Email", value: user.email },
   ];
 
@@ -39,15 +36,15 @@ export function ProfileHeader({ config }: ProfileHeaderProps) {
         <Avatar className="h-24 w-24">
           <AvatarImage
             src={user?.profilePicture ?? ""}
-            alt={user?.firstName}
+            alt={user?.first_name}
           />
           <AvatarFallback className="text-xl">
-            {getInitials(user?.firstName, user?.lastName)}
+            {getInitials(user?.first_name, user?.last_name)}
           </AvatarFallback>
         </Avatar>
         <div className="text-center sm:text-left">
           <h1 className="text-2xl font-bold">
-            {user?.firstName} {user?.lastName}
+            {user?.first_name} {user?.last_name}
           </h1>
           <p className="text-muted-foreground">{user?.email}</p>
           <p className="text-sm text-muted-foreground mt-1">
@@ -77,3 +74,4 @@ export function ProfileHeader({ config }: ProfileHeaderProps) {
     </div>
   );
 }
+

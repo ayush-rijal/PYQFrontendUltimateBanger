@@ -1,8 +1,8 @@
 import { apiSlice } from "../services/apiSlice";
 
 interface User {
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   email: string;
   role?: string;
   isVerified?: boolean;
