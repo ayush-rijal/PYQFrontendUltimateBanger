@@ -2,12 +2,12 @@ import { HeroSection } from "@/landing/HeroSection"
 import Intoduction from "@/landing/Intoduction"
 import  LogoTicker from "@/landing/LogoTicker"
 import LandingPage from "@/landing/landingPage"
-// import Navbar from "@/landing/Navbar";
+import Navbar from "@/landing/Navbar";
 import Footer from "@/landing/Nooter";
 export default function Home() {
   return (
     <>
-      
+      <Navbar/>
       <HeroSection/>
       <LogoTicker/>
       <Intoduction/>
