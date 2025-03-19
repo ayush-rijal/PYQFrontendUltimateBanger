@@ -1,21 +1,26 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PersonalInfoForm } from "./personal-info-form"
-import { ChangePasswordForm } from "./change-password-form"
-import { ProfilePictureForm } from "./profile-picture-form"
-import type { User } from "@/lib/types"
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PersonalInfoForm } from "./personal-info-form";
+import { ChangePasswordForm } from "./change-password-form";
+import { ProfilePictureForm } from "./profile-picture-form";
+import type { User } from "@/lib/types";
 
 interface ProfileTabsProps {
-  user: User
+  user: User;
 }
 
 export function ProfileTabs({ user }: ProfileTabsProps) {
-  const [activeTab, setActiveTab] = useState("personal-info")
+  const [activeTab, setActiveTab] = useState("personal-info");
 
   return (
-    <Tabs defaultValue="personal-info" value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <Tabs
+      defaultValue="personal-info"
+      value={activeTab}
+      onValueChange={setActiveTab}
+      className="w-full"
+    >
       <TabsList className="grid grid-cols-3 w-full max-w-md mb-8">
         <TabsTrigger value="personal-info">Personal Info</TabsTrigger>
         <TabsTrigger value="password">Password</TabsTrigger>
@@ -43,6 +48,5 @@ export function ProfileTabs({ user }: ProfileTabsProps) {
         </div>
       </TabsContent>
     </Tabs>
-  )
+  );
 }
-
