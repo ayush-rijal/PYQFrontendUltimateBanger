@@ -28,11 +28,11 @@ import {
 } from "@/components/ui/sidebar";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAppSelector, useAppDispatch } from "@/redux/hooks";
 import { useLogoutMutation } from "@/redux/features/authApiSlice";
 import { logout as setLogout } from "@/redux/features/authSlice";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
 
 interface MenuItem {
   title: string;
@@ -94,6 +94,7 @@ const menuItems: MenuItem[] = [
   },
 ];
 
+// Group and sort items by category, putting locked items last
 const groupedItems = menuItems.reduce((acc, item) => {
   const category = item.category || "Other";
   if (!acc[category]) acc[category] = [];
@@ -101,6 +102,7 @@ const groupedItems = menuItems.reduce((acc, item) => {
   return acc;
 }, {} as Record<string, MenuItem[]>);
 
+// Sort each category to show unlocked items first
 Object.keys(groupedItems).forEach((category) => {
   groupedItems[category].sort((a, b) => {
     if (!a.isLocked && b.isLocked) return -1;
@@ -136,22 +138,13 @@ export function AppSidebar() {
     <Sidebar
       variant="floating"
       collapsible="icon"
-      className={cn(
-        "bg-white dark:bg-gray-900 transition-all duration-300",
-        "fixed inset-y-0 left-0 z-50 w-16 md:w-20 md:border-r md:border-gray-200 dark:md:border-gray-700",
-        "[&[data-state=open]]:w-64" // Expand to full width when open on all screens
-      )}
+      className="bg-white dark:bg-gray-900"
     >
       <SidebarContent>
         <ScrollArea className="h-full py-4">
           {Object.entries(groupedItems).map(([category, items]) => (
             <SidebarGroup key={category}>
-              <SidebarGroupLabel
-                className={cn(
-                  "text-gray-700 dark:text-gray-300",
-                  "hidden data-[state=open]:block" // Show when sidebar is open
-                )}
-              >
+              <SidebarGroupLabel className="text-gray-700 dark:text-gray-300">
                 {category}
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -165,33 +158,21 @@ export function AppSidebar() {
                             ? `${item.title} (Coming Soon)`
                             : item.title
                         }
-                        className={cn(
-                          "group flex items-center gap-3 py-2 px-3 rounded-lg transition-all duration-200",
+                        className={`flex items-center gap-3 py-2 px-3 rounded-lg transition-colors ${
                           item.isLocked
                             ? "cursor-not-allowed opacity-50"
                             : isSelected(item.url)
                             ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
-                            : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800",
-                          "md:data-[state=collapsed]:hover:w-48 md:data-[state=collapsed]:hover:bg-gray-100 dark:md:data-[state=collapsed]:hover:bg-gray-800"
-                        )}
+                            : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 md:hover:w-48 md:hover:bg-gray-100 dark:md:hover:bg-gray-800 md:hover:shadow-md"
+                        }`}
                       >
                         {item.isLocked ? (
                           <div className="flex items-center gap-3 w-full">
                             <item.icon className="h-5 w-5 flex-shrink-0" />
-                            <span
-                              className={cn(
-                                "truncate",
-                                "hidden data-[state=open]:block" // Show label when sidebar is open
-                              )}
-                            >
+                            <span className="truncate hidden md:group-hover:block">
                               {item.title}
                             </span>
-                            <Lock
-                              className={cn(
-                                "h-4 w-4 ml-auto",
-                                "hidden data-[state=open]:block" // Show lock when sidebar is open
-                              )}
-                            />
+                            <Lock className="h-4 w-4 ml-auto hidden md:group-hover:block" />
                           </div>
                         ) : (
                           <a
@@ -199,12 +180,7 @@ export function AppSidebar() {
                             className="flex items-center gap-3 w-full"
                           >
                             <item.icon className="h-5 w-5 flex-shrink-0" />
-                            <span
-                              className={cn(
-                                "truncate",
-                                "hidden data-[state=open]:block" // Show label when sidebar is open
-                              )}
-                            >
+                            <span className="truncate hidden md:group-hover:block ">
                               {item.title}
                             </span>
                           </a>
@@ -222,27 +198,20 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-gray-200 dark:border-gray-700">
         <SidebarMenu>
           <SidebarMenuItem>
+            <SidebarTrigger className="mb-2" />
             <SidebarMenuButton
               onClick={toggleTheme}
               tooltip={
                 isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"
               }
-              className={cn(
-                "group w-full justify-start gap-3 py-2 px-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800",
-                "md:data-[state=collapsed]:hover:w-48"
-              )}
+              className="w-full justify-start gap-3 py-2 px-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               {isDarkMode ? (
-                <Sun className="h-5 w-5 flex-shrink-0" />
+                <Sun className="h-5 w-5" />
               ) : (
-                <Moon className="h-5 w-5 flex-shrink-0" />
+                <Moon className="h-5 w-5" />
               )}
-              <span
-                className={cn(
-                  "truncate",
-                  "hidden data-[state=open]:block" // Show label when sidebar is open
-                )}
-              >
+              <span className="truncate">
                 {isDarkMode ? "Light Mode" : "Dark Mode"}
               </span>
             </SidebarMenuButton>
@@ -253,20 +222,10 @@ export function AppSidebar() {
               <SidebarMenuButton
                 onClick={handleLogout}
                 tooltip="Log Out"
-                className={cn(
-                  "group w-full justify-start gap-3 py-2 px-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800",
-                  "md:data-[state=collapsed]:hover:w-48"
-                )}
+                className="w-full justify-start gap-3 py-2 px-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
               >
-                <LogOut className="h-5 w-5 flex-shrink-0" />
-                <span
-                  className={cn(
-                    "truncate",
-                    "hidden data-[state=open]:block" // Show label when sidebar is open
-                  )}
-                >
-                  Log Out
-                </span>
+                <LogOut className="h-5 w-5" />
+                <span className="truncate">Log Out</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ) : (
@@ -274,42 +233,22 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  className={cn(
-                    "group w-full justify-start gap-3 py-2 px-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800",
-                    "md:data-[state=collapsed]:hover:w-48"
-                  )}
+                  className="w-full justify-start gap-3 py-2 px-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
                   <a href="/auth/login">
-                    <LogOut className="h-5 w-5 flex-shrink-0" />
-                    <span
-                      className={cn(
-                        "truncate",
-                        "hidden data-[state=open]:block" // Show label when sidebar is open
-                      )}
-                    >
-                      Login
-                    </span>
+                    <LogOut className="h-5 w-5" />
+                    <span className="truncate">Login</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  className={cn(
-                    "group w-full justify-start gap-3 py-2 px-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800",
-                    "md:data-[state=collapsed]:hover:w-48"
-                  )}
+                  className="w-full justify-start gap-3 py-2 px-3 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                 >
                   <a href="/auth/register">
-                    <Users className="h-5 w-5 flex-shrink-0" />
-                    <span
-                      className={cn(
-                        "truncate",
-                        "hidden data-[state=open]:block" // Show label when sidebar is open
-                      )}
-                    >
-                      Register
-                    </span>
+                    <Users className="h-5 w-5" />
+                    <span className="truncate">Register</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>

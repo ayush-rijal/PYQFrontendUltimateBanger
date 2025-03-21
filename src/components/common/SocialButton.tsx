@@ -4,6 +4,7 @@ interface Props {
 	provider: 'google' | 'facebook';
 	children: React.ReactNode;
 	rest?: React.ButtonHTMLAttributes<HTMLButtonElement>;
+	onClick?: () => void;
 }
 
 export default function SocialButton({ provider, children, ...rest }: Props) {
