@@ -146,7 +146,8 @@ interface GlobalLeaderboardEntry {
 const authApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     retrieveUser: builder.query<User, void>({
-      query: () => "/users/me/",
+      // query: () => "/users/me/", //query to get data,, mutate means put post data
+      query: () => "/me/", //query to get data,, mutate means put post data
     }),
     socialAuthenticate: builder.mutation<CreateUserResponse, SocialAuthArgs>({
       query: ({ provider, state, code }) => ({
@@ -243,7 +244,5 @@ export const {
   useActivationMutation,
   useResetPasswordMutation,
   useResetPasswordConfirmMutation,
-  useSaveQuizScoreMutation,
-  useGetLeaderboardQuery,
-  useGetGlobalLeaderboardQuery,
+
 } = authApiSlice;
