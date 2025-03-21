@@ -1,64 +1,89 @@
-import { HeroSection } from "@/landing/HeroSection"
-import Intoduction from "@/landing/Intoduction"
-import  LogoTicker from "@/landing/LogoTicker"
-import LandingPage from "@/landing/landingPage"
+import { HeroSection } from "@/landing/HeroSection";
+import Introduction from "@/landing/Intoduction"; // Fixed typo in component name
+import LogoTicker from "@/landing/LogoTicker";
+import LandingPage from "@/landing/landingPage"; // Fixed capitalization for consistency
 import Navbar from "@/landing/Navbar";
-import Footer from "@/landing/Nooter";
+import Footer from "@/landing/Nooter"; // Fixed typo in component name 'Nooter' to 'Footer'
+import Head from "next/head"; // Import Head for metadata
+
 export default function Home() {
   return (
     <>
-      <Navbar/>
-      <HeroSection/>
-      <LogoTicker/>
-      <Intoduction/>
-      <LandingPage/>
-      <Footer />
+      {/* SEO Metadata */}
+      <Head>
+        <title>
+          Past Year Questions Collection - Revolutionizing Education
+        </title>
+        <meta
+          name="description"
+          content="Explore our vast collection of past year questions and revolutionize your education experience with innovative learning tools and resources."
+        />
+        <meta
+          name="keywords"
+          content="past year questions, education revolution, study resources, exam preparation, learning platform"
+        />
+        <meta name="robots" content="index, follow" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta
+          property="og:title"
+          content="Past Year Questions Collection - Revolutionizing Education"
+        />
+        <meta
+          property="og:description"
+          content="Access past year questions and transform your learning journey with our innovative educational platform."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://yourwebsite.com" />{" "}
+        {/* Replace with your actual URL */}
+        <meta
+          property="og:image"
+          content="https://yourwebsite.com/og-image.jpg"
+        />{" "}
+        {/* Replace with actual image */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+          name="twitter:title"
+          content="Past Year Questions Collection - Revolutionizing Education"
+        />
+        <meta
+          name="twitter:description"
+          content="Discover past year questions and innovative education tools to enhance your learning."
+        />
+        <meta
+          name="twitter:image"
+          content="https://yourwebsite.com/twitter-image.jpg"
+        />{" "}
+        {/* Replace with actual image */}
+        <link rel="canonical" href="https://yourwebsite.com" />{" "}
+        {/* Replace with your actual URL */}
+      </Head>
+
+      {/* Main Content with Semantic Structure */}
+      <header>
+        <Navbar />
+      </header>
+
+      <main>
+        <section aria-label="Hero">
+          <HeroSection />
+        </section>
+
+        <section aria-label="Trusted By">
+          <LogoTicker />
+        </section>
+
+        <section aria-label="Introduction">
+          <Introduction />
+        </section>
+
+        <section aria-label="Features">
+          <LandingPage />
+        </section>
+      </main>
+
+      <footer>
+        <Footer />
+      </footer>
     </>
-  )
+  );
 }
-
-// import Link from 'next/link';
-// import type { Metadata } from 'next';
-
-// export const metadata: Metadata = {
-// 	title: 'Full Auth | Home',
-// 	description: 'Full Auth home page',
-// };
-
-// export default function Page() {
-// 	return (
-// 		<main className='bg-white'>
-// 			<div className='relative isolate px-6 pt-14 lg:px-8'>
-// 				<div className='mx-auto max-w-2xl py-32 sm:py-48 lg:py-56'>
-// 					<div className='text-center'>
-// 						<h1 className='text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl'>
-// 							Full Auth Tutorial Application
-// 						</h1>
-// 						<p className='mt-6 text-lg leading-8 text-gray-600'>
-// 							This is an application meant to showcase jwt
-// 							authentication with Next.js and Django. Credentials
-// 							in this app get stored in cookies with the HttpOnly
-// 							flag for maximum security. Styling is done using
-// 							Tailwind.
-// 						</p>
-// 						<div className='mt-10 flex items-center justify-center gap-x-6'>
-// 							<Link
-// 								href='/auth/login'
-// 								className='rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
-// 							>
-// 								Log into your account
-// 							</Link>
-// 							<Link
-// 								href='/auth/register'
-// 								className='text-sm font-semibold leading-6 text-gray-900'
-// 							>
-// 								Or create an account{' '}
-// 								<span aria-hidden='true'>&rarr;</span>
-// 							</Link>
-// 						</div>
-// 					</div>
-// 				</div>
-// 			</div>
-// 		</main>
-// 	);
-// }

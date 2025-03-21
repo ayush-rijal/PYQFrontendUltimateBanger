@@ -3,7 +3,7 @@ import cn from 'classnames';
 interface Props {
 	provider: 'google' | 'facebook';
 	children: React.ReactNode;
-	[rest: string]: any;
+	rest?: React.ButtonHTMLAttributes<HTMLButtonElement>;
 }
 
 export default function SocialButton({ provider, children, ...rest }: Props) {

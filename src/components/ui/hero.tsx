@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
@@ -98,18 +97,21 @@ const Hero = React.forwardRef<HTMLElement, HeroProps>(
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              <form className="flex flex-col sm:flex-row gap-3 sm:gap-0 p-1.5 sm:p-2 bg-background/30 backdrop-blur-sm border-2 border-amber-100  rounded-full max-w-lg mx-auto shadow-xl">
-                <Input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="bg-background/50 border-0 rounded-full px-6 h-12 flex-1 placeholder:text-foreground/40"
-                />
-                <Link href="/try-demo">
+              <form className="flex flex-row gap-3 sm:gap-3 bg-background/30 backdrop-blur-sm  max-w-lg mx-auto justify-center items-center p-5 sm:rounded-none ">
+                <Link href={"/try-demo"}>
                   <Button
-                    className="rounded-full bg-amber-500 hover:bg-primary/90 text-primary-foreground h-12 px-6 transition-all duration-300 ease-in-out"
+                    className=" sm:text-center rounded-full  bg-amber-700 dark:bg-amber-600 hover:bg-primary/90 text-primary-foreground h-12 px-6 transition-all duration-300 ease-in-out sm:flex-col drop-shadow-2xl "
                     type="submit"
                   >
-                    Start Free
+                    Expore You
+                  </Button>
+                </Link>
+                <Link href="/dashboard">
+                  <Button
+                    className=" flex sm:text-center bg-amber-700 rounded-full dark:bg-amber-600 hover:bg-primary/90 text-primary-foreground h-12  transition-all duration-300 ease-in-out sm:flex-row  drop-shadow-2xl"
+                    type="submit"
+                  >
+                    Go to Dashboard
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
