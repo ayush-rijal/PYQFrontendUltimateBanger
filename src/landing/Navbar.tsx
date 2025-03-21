@@ -67,11 +67,11 @@ export default function Navbar() {
 
   return (
     <div className="w-full px-4 py-4 fixed top-0 left-0 z-50">
-      <nav className="navbar-container max-w-[800px] mx-auto rounded-full dark:bg-slate-600/50 backdrop-blur-md  shadow-lg  bg-gradient-to-r border-2 border-amber-400 dark:border-amber-300 flex items-center justify-between h-16 px-4">
+      <nav className="navbar-container max-w-[800px] mx-auto rounded-full dark:bg-slate-600/50 backdrop-blur-md  shadow-lg  bg-gradient-to-r border-2 border-amber-900  flex items-center justify-between h-16 px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center">
           <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-gradient-to-br from-amber-600 to-amber-900 flex items-center justify-center shadow-inner">
-           <Image src="/logo.svg" width = "300" height = "300" alt="logo"/>
+            <Image src="/logo.svg" width="300" height="300" alt="logo" />
           </div>
           <p className="ml-2 text-x font-bold bg-gradient-to-r from-amber-500 to-amber-700 bg-clip-text text-transparent">
             PastYearQuestion

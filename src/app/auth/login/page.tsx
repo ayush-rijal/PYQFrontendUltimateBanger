@@ -61,7 +61,7 @@ export default function Page() {
 
       {/* Form Section */}
       <section className="mt-10 sm:mx-auto sm:w-full sm:max-w-md" aria-label="Login Form">
-        <div className="bg-white dark:bg-gray-800 py-8 px-6 shadow-xl rounded-xl sm:px-10 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white text-white dark:text-white dark:bg-gray-800 py-8 px-6 shadow-xl rounded-xl sm:px-10 border border-gray-200 dark:border-gray-700">
           <LoginForm />
           <div className="relative mt-6">
             <div className="absolute inset-0 flex items-center">

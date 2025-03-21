@@ -1,148 +1,82 @@
-// 'use client';
-// import { useState } from 'react';
-// import { useGetQuestionsQuery, useGetChoicesQuery } from '@/redux/features/quizApiSlice';
-// import { useParams } from 'next/navigation';
+"use client";
 
-// export default function QuizPage() {
-//   const { category0, category1, quizFile } = useParams() as {
-//     category0: string;
-//     category1: string;
-//     quizFile: string;
-//   };
-//   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-//   const [selectedSubject, setSelectedSubject] = useState<string>('all');
+import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  useGetAllQuestionsQuery,
+  useGetQuestionsQuery,
+  useGetChoicesQuery,
+} from "@/redux/features/quizApiSlice";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  BookOpen,
+  CheckCircle,
+  Send,
+} from "lucide-react";
+import Loading from "@/loading/Loading";
 
-//   const { data: questionsData, isLoading: qLoading, error: qError } = useGetQuestionsQuery({
-//     category0,
-//     category1,
-//     quizFile,
-//   });
-
-//   const questions = questionsData?.results || [];
-//   const currentQuestion = questions[currentQuestionIndex];
-//   const { data: choices, isLoading: cLoading, error: cError } = useGetChoicesQuery({
-//     category0,
-//     category1,
-//     quizFile,
-//     questionId: currentQuestion?.id || 0,
-//   });
-
-//   // Extract unique subject categories
-//   const subjectCategories = Array.from(new Set(questions.map((q) => q.subject_category_name)));
-//   const filteredQuestions =
-//     selectedSubject === 'all'
-//       ? questions
-//       : questions.filter((q) => q.subject_category_name === selectedSubject);
-
-//   if (qLoading || cLoading) return <div>Loading...</div>;
-//   if (qError) return <div>Error: {(qError as any).message}</div>;
-//   if (cError) return <div>Error: {(cError as any).message}</div>;
-
-//   return (
-//     <div className="container mx-auto p-4 flex flex-col md:flex-row gap-6">
-//       {/* Sidebar */}
-//       <div className="w-full md:w-1/4">
-//         <div className="bg-gray-100 p-4 rounded-lg">
-//           <h3 className="text-lg font-semibold mb-2">Filter by Subject</h3>
-//           <div className="flex flex-col gap-2">
-//             <button
-//               className={`p-2 rounded ${selectedSubject === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-//               onClick={() => setSelectedSubject('all')}
-//             >
-//               All
-//             </button>
-//             {subjectCategories.map((subject) => (
-//               <button
-//                 key={subject}
-//                 className={`p-2 rounded ${selectedSubject === subject ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-//                 onClick={() => setSelectedSubject(subject)}
-//               >
-//                 {subject}
-//               </button>
-//             ))}
-//           </div>
-//           <h3 className="text-lg font-semibold mt-4 mb-2">Questions</h3>
-//           <div className="grid grid-cols-5 gap-2">
-//             {filteredQuestions.map((q, index) => (
-//               <button
-//                 key={q.id}
-//                 className={`p-2 rounded ${currentQuestionIndex === questions.indexOf(q) ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-//                 onClick={() => setCurrentQuestionIndex(questions.indexOf(q))}
-//               >
-//                 {index + 1}
-//               </button>
-//             ))}
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Quiz Content */}
-//       <div className="w-full md:w-3/4">
-//         <div className="bg-white p-6 rounded-lg shadow">
-//           <h2 className="text-2xl font-bold mb-4">{currentQuestion?.text}</h2>
-//           <div className="space-y-4">
-//             {choices?.map((choice) => (
-//               <div key={choice.id} className="p-2 border rounded hover:bg-gray-100">
-//                 <input type="radio" name="choice" className="mr-2" />
-//                 {choice.text}
-//               </div>
-//             ))}
-//           </div>
-//           <div className="mt-6 flex justify-between">
-//             <button
-//               className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
-//               disabled={currentQuestionIndex === 0}
-//               onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
-//             >
-//               Previous
-//             </button>
-//             <button
-//               className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
-//               disabled={currentQuestionIndex === questions.length - 1}
-//               onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
-//             >
-//               Next
-//             </button>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-'use client';
-import { useState } from 'react';
-import { useGetAllQuestionsQuery, useGetQuestionsQuery, useGetChoicesQuery } from '@/redux/features/quizApiSlice';
-import { useParams } from 'next/navigation';
-
-
-// Define Question type locally (or import from anyplace where question interface is defined and exported)
 interface Question {
-    id: number;
-    text: string;
-    questions_file_title: string;
-    subject_category_name: string;
-  }
+  id: number;
+  text: string;
+  questions_file_title: string;
+  subject_category_name: string;
+}
+
+interface Choice {
+  id: number;
+  text: string;
+}
 
 export default function QuizPage() {
-  const { category0, category1, quizFile:rawQuizFile } = useParams() as {
+  const {
+    category0,
+    category1,
+    quizFile: rawQuizFile,
+  } = useParams() as {
     category0: string;
     category1: string;
     quizFile: string;
   };
-
-  const quizFile= decodeURIComponent(rawQuizFile);
+  const router = useRouter();
+  const quizFile = decodeURIComponent(rawQuizFile);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedChoices, setSelectedChoices] = useState<
+    Record<number, number>
+  >({});
+  const [activeTab, setActiveTab] = useState<string>("questions");
 
-  // Fetch all questions for sidebar
-  const { data: allQuestions = [], isLoading: allLoading, error: allError } = useGetAllQuestionsQuery({
+  const {
+    data: allQuestions = [],
+    isLoading: allLoading,
+    error: allError,
+  } = useGetAllQuestionsQuery({
     category0,
     category1,
     quizFile,
   });
 
-  // Fetch paginated questions for middle
-  const { data: questionsData, isLoading: qLoading, error: qError } = useGetQuestionsQuery({
+  const {
+    data: questionsData,
+    isLoading: qLoading,
+    error: qError,
+  } = useGetQuestionsQuery({
     category0,
     category1,
     quizFile,
@@ -154,7 +88,10 @@ export default function QuizPage() {
   const pageSize = 5;
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  // Group all questions by subject category
+  const answeredCount = Object.keys(selectedChoices).length;
+  const progressPercentage =
+    totalCount > 0 ? (answeredCount / totalCount) * 100 : 0;
+
   const groupedQuestions = allQuestions.reduce((acc, q) => {
     const subject = q.subject_category_name;
     if (!acc[subject]) acc[subject] = [];
@@ -162,123 +99,369 @@ export default function QuizPage() {
     return acc;
   }, {} as Record<string, Question[]>);
 
-  // Handle question click
   const handleQuestionClick = (questionId: number) => {
     const questionIndex = allQuestions.findIndex((q) => q.id === questionId);
     const page = Math.floor(questionIndex / pageSize) + 1;
     setCurrentPage(page);
+    setActiveTab("questions");
   };
 
-  if (allLoading || qLoading) return <div>Loading...</div>;
-  if (allError) return <div>Error: {(allError as any).message}</div>;
-  if (qError) return <div>Error: {(qError as any).message}</div>;
+  const handleChoiceSelect = (questionId: number, choiceId: number) => {
+    setSelectedChoices((prev) => ({
+      ...prev,
+      [questionId]: choiceId,
+    }));
+  };
+
+  const handleSubmitQuiz = () => {
+    const quizId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    router.push(
+      `/quiz-app/category/${category0}/${category1}/${quizFile}/results/${quizId}?choices=${encodeURIComponent(
+        JSON.stringify(selectedChoices)
+      )}`
+    );
+  };
+
+  if (allLoading || qLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loading />
+        </div>
+      </div>
+    );
+  }
+
+  if (allError || qError) {
+    return (
+      <div className="p-8 text-center text-destructive">
+        Error: {(allError as Error)?.message || (qError as Error)?.message}
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-4 flex flex-col gap-6">
-      {/* Header */}
-      <div className="text-center">
-        <h1 className="text-4xl font-bold">{quizFile}</h1>
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Left Sidebar */}
-        <div className="w-full md:w-1/4">
-          <div className="bg-gray-100 p-4 rounded-lg max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-2">Questions ({totalCount})</h3>
-            {Object.entries(groupedQuestions).map(([subject, qs]) => (
-              <div key={subject} className="mb-4">
-                <h4 className="text-md font-semibold">{subject} ({qs.length})</h4>
-                <div className="grid grid-cols-5 gap-2 mt-2">
-                  {qs.map((q) => (
-                    <button
-                      key={q.id}
-                      className={`p-2 rounded ${
-                        questions.some((pq) => pq.id === q.id)
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-200'
-                      }`}
-                      onClick={() => handleQuestionClick(q.id)}
-                    >
-                      {allQuestions.indexOf(q) + 1}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+    <div className="container mx-auto p-4 lg:p-8">
+      <header className="mb-8">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="text-center md:text-left">
+            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+              {quizFile}
+            </h1>
+            <p className="text-muted-foreground">
+              {category0} / {category1}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="px-3 py-1">
+              <BookOpen className="mr-1 h-3 w-3" />
+              {totalCount} Questions
+            </Badge>
+            <Badge variant="outline" className="px-3 py-1">
+              <CheckCircle className="mr-1 h-3 w-3" />
+              {answeredCount} Answered
+            </Badge>
           </div>
         </div>
-
-        {/* Middle Container */}
-        <div className="w-full md:w-3/4">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-2xl font-bold mb-4">Questions (Page {currentPage})</h2>
-            <div className="space-y-6">
-              {questions.map((question) => (
-                <div key={question.id}>
-                  <p className="text-lg font-semibold">{question.text}</p>
-                  <Choices
-                    category0={category0}
-                    category1={category1}
-                    quizFile={quizFile}
-                    questionId={question.id}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 flex justify-between">
-              <button
-                className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((prev) => prev - 1)}
-              >
-                Previous Page
-              </button>
-              <button
-                className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((prev) => prev + 1)}
-              >
-                Next Page
-              </button>
-            </div>
+        <div className="mt-4">
+          <div className="flex items-center gap-2">
+            <Progress value={progressPercentage} className="h-2" />
+            <span className="text-sm font-medium">
+              {Math.round(progressPercentage)}%
+            </span>
           </div>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 relative">
+        <div className="lg:hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="w-full">
+              <TabsTrigger value="questions" className="flex-1">
+                Questions
+              </TabsTrigger>
+              <TabsTrigger value="navigation" className="flex-1">
+                Navigation
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="navigation" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Question Navigator</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[60vh]">
+                    {Object.entries(groupedQuestions).map(([subject, qs]) => (
+                      <div key={subject} className="mb-6">
+                        <h4 className="mb-2 font-medium">
+                          {subject}{" "}
+                          <span className="text-muted-foreground">
+                            ({qs.length})
+                          </span>
+                        </h4>
+                        <div className="grid grid-cols-5 gap-2">
+                          {qs.map((q) => (
+                            <Button
+                              key={q.id}
+                              variant={
+                                questions.some((pq) => pq.id === q.id)
+                                  ? "default"
+                                  : q.id in selectedChoices
+                                  ? "outline"
+                                  : "secondary"
+                              }
+                              size="sm"
+                              className={`h-10 w-10 p-0 rounded-full ${
+                                q.id in selectedChoices ? "border-primary" : ""
+                              }`}
+                              onClick={() => handleQuestionClick(q.id)}
+                            >
+                              {allQuestions.indexOf(q) + 1}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="questions" className="mt-4">
+              <QuestionsContent
+                questions={questions}
+                category0={category0}
+                category1={category1}
+                quizFile={quizFile}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                setCurrentPage={setCurrentPage}
+                selectedChoices={selectedChoices}
+                handleChoiceSelect={handleChoiceSelect}
+                onSubmit={handleSubmitQuiz}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        <div className="hidden lg:block lg:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Question Navigator</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="">
+                {Object.entries(groupedQuestions).map(([subject, qs]) => (
+                  <div key={subject} className="mb-4">
+                    <h4 className="mb-2 font-medium">
+                      {subject}{" "}
+                      <span className="text-muted-foreground">
+                        ({qs.length})
+                      </span>
+                    </h4>
+                    <div className="grid grid-cols-4 gap-3 p-3">
+                      {qs.map((q) => (
+                        <Button
+                          key={q.id}
+                          variant={
+                            questions.some((pq) => pq.id === q.id)
+                              ? "default"
+                              : q.id in selectedChoices
+                              ? "outline"
+                              : "secondary"
+                          }
+                          size="sm"
+                          className={`h-8 w-8 p-0 rounded-full ${
+                            q.id in selectedChoices ? "border-primary" : ""
+                          }`}
+                          onClick={() => handleQuestionClick(q.id)}
+                        >
+                          {allQuestions.indexOf(q) + 1}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="hidden lg:block lg:col-span-3">
+          <QuestionsContent
+            questions={questions}
+            category0={category0}
+            category1={category1}
+            quizFile={quizFile}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            setCurrentPage={setCurrentPage}
+            selectedChoices={selectedChoices}
+            handleChoiceSelect={handleChoiceSelect}
+            onSubmit={handleSubmitQuiz}
+          />
         </div>
       </div>
     </div>
   );
 }
 
-// Choices Component
+function QuestionsContent({
+  questions,
+  category0,
+  category1,
+  quizFile,
+  currentPage,
+  totalPages,
+  setCurrentPage,
+  selectedChoices,
+  handleChoiceSelect,
+  onSubmit,
+}: {
+  questions: Question[];
+  category0: string;
+  category1: string;
+  quizFile: string;
+  currentPage: number;
+  totalPages: number;
+  setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
+  selectedChoices: Record<number, number>;
+  handleChoiceSelect: (questionId: number, choiceId: number) => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="space-y-6 ">
+      {questions.map((question, index) => (
+        <Card key={question.id} className="transition-all hover:shadow-md">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <Badge variant="outline" className="mb-2">
+                Question {index + 1}
+              </Badge>
+              <Badge variant="outline" className="mb-2">
+                {question.subject_category_name}
+              </Badge>
+            </div>
+            <CardTitle className="text-xl">{question.text}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Choices
+              category0={category0}
+              category1={category1}
+              quizFile={quizFile}
+              questionId={question.id}
+              selectedChoice={selectedChoices[question.id]}
+              onChoiceSelect={handleChoiceSelect}
+            />
+          </CardContent>
+          <Separator />
+        </Card>
+      ))}
+
+      <Card>
+        <CardFooter className="flex flex-col items-center gap-4 p-4 sm:flex-row sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => prev - 1)}
+              disabled={currentPage === 1}
+              className="gap-1"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => prev + 1)}
+              disabled={currentPage === totalPages}
+              className="gap-1"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            variant="default"
+            onClick={onSubmit}
+            className="w-full sm:w-auto"
+          >
+            <Send className="mr-2 h-4 w-4" />
+            Submit Quiz
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}
+
 function Choices({
   category0,
   category1,
   quizFile,
   questionId,
+  selectedChoice,
+  onChoiceSelect,
 }: {
   category0: string;
   category1: string;
   quizFile: string;
   questionId: number;
+  selectedChoice?: number;
+  onChoiceSelect: (questionId: number, choiceId: number) => void;
 }) {
-  const { data: choices, isLoading, error } = useGetChoicesQuery({
-    category0,
-    category1,
-    quizFile,
-    questionId,
-  });
+  const {
+    data: choices = [],
+    isLoading,
+    error,
+  } = useGetChoicesQuery({ category0, category1, quizFile, questionId });
 
-  if (isLoading) return <div>Loading choices...</div>;
-  if (error) return <div>Error loading choices</div>;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-6">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-md bg-destructive/10 p-4 text-center text-destructive">
+        Error loading choices
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-2 mt-2">
-      {choices?.map((choice) => (
-        <div key={choice.id} className="p-2 border rounded hover:bg-gray-100">
-          <input type="radio" name={`choice-${questionId}`} className="mr-2" />
-          {choice.text}
+    <RadioGroup
+      value={selectedChoice?.toString()}
+      onValueChange={(value) =>
+        onChoiceSelect(questionId, Number.parseInt(value))
+      }
+      className="space-y-3"
+    >
+      {choices.map((choice: Choice) => (
+        <div
+          key={choice.id}
+          className="flex items-start space-x-2 rounded-md border p-3 transition-all hover:bg-accent"
+        >
+          <RadioGroupItem
+            value={choice.id.toString()}
+            id={`choice-${questionId}-${choice.id}`}
+          />
+          <Label
+            htmlFor={`choice-${questionId}-${choice.id}`}
+            className="w-full cursor-pointer"
+          >
+            {choice.text}
+          </Label>
         </div>
       ))}
-    </div>
+    </RadioGroup>
   );
 }
-

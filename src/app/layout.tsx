@@ -7,7 +7,7 @@ import { Setup } from "@/components/utils";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Full Auth",
+  title: "PYQ-arun",
   description: "Full Auth application that provides jwt authentication",
 };
 
