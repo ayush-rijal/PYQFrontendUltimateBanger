@@ -1,9 +1,9 @@
 "use client";
-import { Avatar, AvatarFallback,  } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
 import { useRetrieveUserQuery } from "@/redux/features/authApiSlice";
 import { Spinner } from "@/components/common";
-import  Image  from "next/image"
+import Image from "next/image";
 interface Config {
   label: string;
   value: string | undefined;
@@ -24,7 +24,7 @@ export function ProfileHeader() {
     return <p className="text-center text-red-500">User data not available</p>;
   }
 
-  const config: Config[] =[
+  const config: Config[] = [
     { label: "First Name", value: user.first_name },
     { label: "Last Name", value: user.last_name },
     { label: "Email", value: user.email },
@@ -33,12 +33,12 @@ export function ProfileHeader() {
   return (
     <div className="flex flex-col items-center sm:flex-row sm:items-start sm:justify-between mb-8 gap-4">
       <div className="flex flex-col sm:flex-row items-center gap-4">
-        <Avatar className="h-24 w-24">
+        <Avatar className="h-48 w-48">
           <Image
             src={user?.profilePicture ?? ""}
             alt={user?.first_name}
-            height={96}
-            width={96}
+            height={120}
+            width={120}
           />
           <AvatarFallback className="text-xl">
             {getInitials(user?.first_name, user?.last_name)}
@@ -76,4 +76,3 @@ export function ProfileHeader() {
     </div>
   );
 }
-

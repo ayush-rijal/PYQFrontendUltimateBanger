@@ -1,0 +1,10 @@
+@layer base {
+    :root {
+      --chart-1: 220 70% 50%; /* Light mode: Blue-ish */
+      --chart-2: 160 60% 45%; /* Light mode: Teal-ish */
+    }
+    .dark {
+      --chart-1: 210 80% 60%; /* Dark mode: Lighter blue */
+      --chart-2: 170 70% 50%; /* Dark mode: Lighter teal */
+    }
+  }

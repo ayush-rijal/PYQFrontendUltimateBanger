@@ -1,742 +1,262 @@
-// "use client";
-
-// import { useRouter, useParams, useSearchParams } from "next/navigation";
-// import { useGetAllQuestionsQuery } from "@/redux/features/quizApiSlice";
-// import {
-//   useRetrieveUserQuery,
-//   useSaveQuizScoreMutation,
-// } from "@/redux/features/authApiSlice";
-// // import { Progress } from "@/components/ui/progress";
-// import { Button } from "@/components/ui/button";
-// import {
-//   Card,
-//   CardContent,
-//   CardHeader,
-//   CardTitle,
-//   CardFooter,
-// } from "@/components/ui/card";
-// import { Badge } from "@/components/ui/badge";
-// // import { Separator } from "@/components/ui/separator";
-// import { ScrollArea } from "@/components/ui/scroll-area";
-// import {
-//   BarChart,
-//   CheckCircle,
-//   RotateCcw,
-//   Share2,
-//   AlertCircle,
-//   Info,
-// } from "lucide-react";
-// import { useState, useEffect } from "react";
-// import {
-//   Accordion,
-//   AccordionContent,
-//   AccordionItem,
-//   AccordionTrigger,
-// } from "@/components/ui/accordion";
-// import {
-//   BarChart as RechartsBarChart,
-//   Bar,
-//   XAxis,
-//   YAxis,
-//   ResponsiveContainer,
-//   Legend,
-// } from "recharts";
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// import {
-//   Tooltip,
-//   TooltipContent,
-//   TooltipProvider,
-//   TooltipTrigger,
-// } from "@/components/ui/tooltip";
-// import { Skeleton } from "@/components/ui/skeleton";
-// import { toast, Toaster } from "sonner";
-// import Link from "next/link";
-
-// interface Question {
-//   id: number;
-//   text: string;
-//   questions_file_title: string;
-//   subject_category_name: string;
-//   correct_choice_id?: number;
-//   choices?: Choice[];
-// }
-
-// interface Choice {
-//   id: number;
-//   text: string;
-//   is_correct: boolean;
-//   question: number;
-// }
-
-// interface LeaderboardEntry {
-//   user_id: string;
-//   user_name: string;
-//   score: number;
-// }
-
-// // Custom hook to fetch choices for all questions
-// const useFetchChoices = (
-//   questions: Question[],
-//   category0: string,
-//   category1: string,
-//   quizFile: string
-// ) => {
-//   const [choicesMap, setChoicesMap] = useState<Record<number, Choice[]>>({});
-//   const [questionIds, setQuestionIds] = useState<number[]>([]);
-
-//   useEffect(() => {
-//     if (questions.length > 0) {
-//       setQuestionIds(questions.map((q) => q.id));
-//     }
-//   }, [questions]);
-
-//   useEffect(() => {
-//     if (questionIds.length === 0) return;
-
-//     const fetchChoices = async () => {
-//       for (const questionId of questionIds) {
-//         try {
-//           const response = await fetch(
-//             `/api/${category0}/${category1}/${quizFile}/${questionId}/choices/`
-//           );
-//           if (response.ok) {
-//             const choices: Choice[] = await response.json();
-//             setChoicesMap((prev) => ({
-//               ...prev,
-//               [questionId]: choices,
-//             }));
-//           } else {
-//             console.error(`Failed to fetch choices for question ${questionId}`);
-//           }
-//         } catch (error) {
-//           console.error(
-//             `Error fetching choices for question ${questionId}:`,
-//             error
-//           );
-//         }
-//       }
-//     };
-
-//     fetchChoices();
-//   }, [questionIds, category0, category1, quizFile]);
-
-//   return choicesMap;
-// };
-
-// export default function ResultsPage() {
-//   const router = useRouter();
-//   const {
-//     category0,
-//     category1,
-//     quizFile: rawQuizFile,
-//     quizId,
-//   } = useParams() as {
-//     category0: string;
-//     category1: string;
-//     quizFile: string;
-//     quizId: string;
-//   };
-//   const searchParams = useSearchParams();
-//   const quizFile = decodeURIComponent(rawQuizFile);
-
-//   const selectedChoices = JSON.parse(
-//     decodeURIComponent(searchParams.get("choices") || "{}")
-//   ) as Record<number, number>;
-
-//   const {
-//     data: allQuestions = [],
-//     isLoading,
-//     error,
-//   } = useGetAllQuestionsQuery({ category0, category1, quizFile });
-
-//   const choicesMap = useFetchChoices(
-//     allQuestions,
-//     category0,
-//     category1,
-//     quizFile
-//   );
-
-//   const { data: currentUser } = useRetrieveUserQuery();
-//   const [saveQuizScore] = useSaveQuizScoreMutation();
-
-//   const handleRestart = () => {
-//     toast.success("Quiz Restarted", {
-//       description: "You're ready to take the quiz again! Good luck!",
-//     });
-//     router.push(`/quiz/${category0}/${category1}/${rawQuizFile}`);
-//   };
-
-//   const handleShare = () => {
-//     const shareUrl = window.location.href;
-//     navigator.clipboard.writeText(shareUrl).then(() => {
-//       toast.success("Results Shared", {
-//         description: "The results URL has been copied to your clipboard!",
-//       });
-//     });
-//   };
-
-//   // Calculate performance metrics
-//   const answeredCount = Object.keys(selectedChoices).length;
-//   const totalQuestions = allQuestions.length;
-//   const completionPercentage = (answeredCount / totalQuestions) * 100;
-
-//   let correctCount = 0;
-//   allQuestions.forEach((question) => {
-//     const choices = choicesMap[question.id] || [];
-//     const selectedChoice = choices.find(
-//       (choice) => choice.id === selectedChoices[question.id]
-//     );
-//     if (selectedChoice && selectedChoice.is_correct) {
-//       correctCount++;
-//     }
-//   });
-//   const scorePercentage = (correctCount / totalQuestions) * 100;
-
-//   // Save the user's score to the leaderboard
-//   useEffect(() => {
-//     const saveScore = async () => {
-//       if (!currentUser) {
-//         console.error("User not authenticated");
-//         return;
-//       }
-
-//       const userId = currentUser.id || currentUser.email; // Use email as fallback if id is not available
-//       const userName = `${currentUser.first_name} ${currentUser.last_name}`;
-
-//       try {
-//         await saveQuizScore({
-//           user_id: userId,
-//           user_name: userName,
-//           category0,
-//           category1,
-//           quiz_file: quizFile,
-//           quiz_id: quizId,
-//           score: correctCount,
-//         }).unwrap();
-//         toast.success("Score Saved", {
-//           description: "Your score has been added to the leaderboard!",
-//         });
-//       } catch (error) {
-//         console.error("Error saving score to leaderboard:", error);
-//         toast.error("Error", {
-//           description: "Failed to save your score to the leaderboard.",
-//         });
-//       }
-//     };
-
-//     if (correctCount > 0 && totalQuestions > 0 && currentUser) {
-//       saveScore();
-//     }
-//   }, [
-//     correctCount,
-//     totalQuestions,
-//     category0,
-//     category1,
-//     quizFile,
-//     quizId,
-//     currentUser,
-//     saveQuizScore,
-//   ]);
-
-//   // Group questions by subject for category-wise performance
-//   const performanceBySubject = allQuestions.reduce((acc, question) => {
-//     const subject = question.subject_category_name;
-//     if (!acc[subject]) {
-//       acc[subject] = { total: 0, correct: 0 };
-//     }
-//     acc[subject].total += 1;
-//     const choices = choicesMap[question.id] || [];
-//     const selectedChoice = choices.find(
-//       (choice) => choice.id === selectedChoices[question.id]
-//     );
-//     if (selectedChoice && selectedChoice.is_correct) {
-//       acc[subject].correct += 1;
-//     }
-//     return acc;
-//   }, {} as Record<string, { total: number; correct: number }>);
-
-//   const barChartData = Object.entries(performanceBySubject).map(
-//     ([subject, { correct, total }]) => ({
-//       name: subject,
-//       correct,
-//       incorrect: total - correct,
-//       total,
-//     })
-//   );
-
-//   if (isLoading) {
-//     return (
-//       <div className="container mx-auto p-4 lg:p-8">
-//         <div className="max-w-5xl mx-auto space-y-6">
-//           <Skeleton className="h-32 w-full rounded-lg" />
-//           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-//             <Skeleton className="h-40 w-full rounded-lg" />
-//             <Skeleton className="h-40 w-full rounded-lg" />
-//             <Skeleton className="h-40 w-full rounded-lg" />
-//           </div>
-//           <Skeleton className="h-64 w-full rounded-lg" />
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <div className="p-8 text-center text-destructive">
-//         Error: {(error as Error).message}
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="container ">
-//       <Toaster />
-//       <div className="max-w-5xl ">
-//         <Card className="shadow-lg">
-//           <CardHeader className="dark:text-white rounded-t-lg">
-//             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-//               <div>
-//                 <CardTitle className="text-3xl font-bold">
-//                   Quiz Results
-//                 </CardTitle>
-//                 <p className="text-blue-100 mt-2 dark:text-white">
-//                   {category0} / {category1}
-//                 </p>
-//               </div>
-//               <div className="flex flex-col items-start sm:items-end gap-2">
-//                 <Badge variant="secondary" className="text-lg ">
-//                   {quizFile}
-//                 </Badge>
-//                 <Badge
-//                   variant="outline"
-//                   className="text-sm bg-transparent text-white border-white"
-//                 >
-//                   Your Quiz ID: {quizId}
-//                 </Badge>
-//               </div>
-//             </div>
-//           </CardHeader>
-//           <CardContent className="pt-6">
-//             <Tabs defaultValue="summary" className="w-full">
-//               <TabsList className="grid w-full grid-cols-4">
-//                 <TabsTrigger value="summary">Summary</TabsTrigger>
-//                 <TabsTrigger value="analytics">Analytics</TabsTrigger>
-//                 <TabsTrigger value="answers">Answers</TabsTrigger>
-//                 <TabsTrigger value="leaderboard">
-//                   <Link href="/leaderboard">Leaderboard</Link>
-//                 </TabsTrigger>
-//               </TabsList>
-
-//               {/* Summary Tab */}
-//               <TabsContent value="summary">
-//                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-6">
-//                   <div className="text-center p-6 bg-gray-50  dark:bg-gray-700  rounded-lg shadow-sm">
-//                     <BarChart className="h-10 w-10 mx-auto mb-3 text-blue-600" />
-//                     <p className="text-sm text-gray-500 dark:text-white">
-//                       Total Questions
-//                     </p>
-//                     <p className="text-3xl font-bold text-gray-800 dark:text-white">
-//                       {totalQuestions}
-//                     </p>
-//                   </div>
-//                   <div className="text-center p-6 dark:bg-gray-700  bg-gray-50 rounded-lg shadow-sm">
-//                     <CheckCircle className="h-10 w-10 mx-auto mb-3 text-green-500" />
-//                     <p className="text-sm text-gray-500 dark:text-white">
-//                       Correct Answers
-//                     </p>
-//                     <p className="text-3xl font-bold text-gray-800 dark:text-white">
-//                       {correctCount}
-//                     </p>
-//                   </div>
-//                   <div className=" dark:bg-gray-700 text-center p-6 bg-gray-50 rounded-lg shadow-sm">
-//                     <div className="relative w-24 h-24 mx-auto mb-3">
-//                       <svg className="w-full h-full" viewBox="0 0 36 36">
-//                         <path
-//                           d="M18 2.0845
-//                             a 15.9155 15.9155 0 0 1 0 31.831
-//                             a 15.9155 15.9155 0 0 1 0 -31.831"
-//                           fill="none"
-//                           stroke="#E5E7EB"
-//                           strokeWidth="3"
-//                         />
-//                         <path
-//                           d="M18 2.0845
-//                             a 15.9155 15.9155 0 0 1 0 31.831
-//                             a 15.9155 15.9155 0 0 1 0 -31.831"
-//                           fill="none"
-//                           stroke="#3B82F6"
-//                           strokeWidth="3"
-//                           strokeDasharray={`${scorePercentage}, 100`}
-//                         />
-//                         <text
-//                           x="18"
-//                           y="23.35"
-//                           className="text-sm text-gray-800"
-//                           textAnchor="middle"
-//                         >
-//                           {Math.round(scorePercentage)}%
-//                         </text>
-//                       </svg>
-//                     </div>
-//                     <p className="text-sm text-gray-500 dark:text-white">
-//                       Score
-//                     </p>
-//                   </div>
-//                 </div>
-//               </TabsContent>
-
-//               {/* Analytics Tab */}
-//               <TabsContent value="analytics">
-//                 <div className="mt-6">
-//                   <div className="flex items-center gap-2 mb-4">
-//                     <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">
-//                       Performance by Subject
-//                     </h3>
-//                     <TooltipProvider>
-//                       <Tooltip>
-//                         <TooltipTrigger>
-//                           <Info className="h-5 w-5 text-gray-500" />
-//                         </TooltipTrigger>
-//                         <TooltipContent>
-//                           <p>
-//                             Shows the number of correct and incorrect answers
-//                             per subject.
-//                           </p>
-//                         </TooltipContent>
-//                       </Tooltip>
-//                     </TooltipProvider>
-//                   </div>
-//                   <div className="h-64">
-//                     <ResponsiveContainer width="100%" height="100%">
-//                       <RechartsBarChart data={barChartData}>
-//                         <XAxis dataKey="name" />
-//                         <YAxis />
-//                         <Legend />
-//                         <Bar
-//                           dataKey="correct"
-//                           stackId="a"
-//                           fill="#10B981"
-//                           name="Correct"
-//                           radius={[8, 8, 0, 0]}
-//                         />
-//                         <Bar
-//                           dataKey="incorrect"
-//                           stackId="a"
-//                           fill="#EF4444"
-//                           name="Incorrect"
-//                           radius={[8, 8, 0, 0]}
-//                         />
-//                       </RechartsBarChart>
-//                     </ResponsiveContainer>
-//                   </div>
-//                 </div>
-//               </TabsContent>
-
-//               {/* Answers Tab */}
-//               <TabsContent value="answers">
-//                 <div className="mt-6">
-//                   <h3 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-white">
-//                     Your Answers
-//                   </h3>
-//                   <ScrollArea className="h-[50vh] rounded-md border">
-//                     <Accordion type="multiple" className="p-4 space-y-4">
-//                       {allQuestions.map((question, index) => {
-//                         const choices = choicesMap[question.id] || [];
-//                         const selectedChoice = choices.find(
-//                           (choice) => choice.id === selectedChoices[question.id]
-//                         );
-//                         const correctChoice = choices.find(
-//                           (choice) => choice.is_correct
-//                         );
-//                         const isCorrect = selectedChoice?.is_correct || false;
-
-//                         return (
-//                           <AccordionItem
-//                             key={question.id}
-//                             value={`item-${question.id}`}
-//                           >
-//                             <AccordionTrigger className="text-left p-2 rounded-md">
-//                               <div className="flex items-center justify-between w-full">
-//                                 <span className="text-lg font-medium">
-//                                   {index + 1}. {question.text}
-//                                 </span>
-//                                 <div className="flex items-center gap-2">
-//                                   {selectedChoices[question.id] ? (
-//                                     isCorrect ? (
-//                                       <CheckCircle className="h-5 w-5 text-green-500" />
-//                                     ) : (
-//                                       <AlertCircle className="h-5 w-5 text-red-500" />
-//                                     )
-//                                   ) : (
-//                                     <span className="text-gray-500 text-sm">
-//                                       Not answered
-//                                     </span>
-//                                   )}
-//                                 </div>
-//                               </div>
-//                             </AccordionTrigger>
-//                             <AccordionContent className="pl-6">
-//                               <div className="space-y-2">
-//                                 <p className="text-sm text-gray-600">
-//                                   <span className="font-medium text-xl">
-//                                     Your Answer:
-//                                   </span>{" "}
-//                                   {selectedChoice ? (
-//                                     isCorrect ? (
-//                                       <span className="text-green-600">
-//                                         {selectedChoice.text}
-//                                       </span>
-//                                     ) : (
-//                                       <span className="text-red-600">
-//                                         {selectedChoice.text}
-//                                       </span>
-//                                     )
-//                                   ) : (
-//                                     <span className="text-gray-500 font-bold">
-//                                       Not answered
-//                                     </span>
-//                                   )}
-//                                 </p>
-//                                 {correctChoice && (
-//                                   <p className="text-sm text-gray-600">
-//                                     <span className="font-medium">
-//                                       Correct Answer:
-//                                     </span>{" "}
-//                                     <span className="text-green-600">
-//                                       {correctChoice.text}
-//                                     </span>
-//                                   </p>
-//                                 )}
-//                                 <p className="text-sm text-gray-500">
-//                                   Subject: {question.subject_category_name}
-//                                 </p>
-//                               </div>
-//                             </AccordionContent>
-//                           </AccordionItem>
-//                         );
-//                       })}
-//                     </Accordion>
-//                   </ScrollArea>
-//                 </div>
-//               </TabsContent>
-
-//               {/* Leaderboard Tab (Now a Link) */}
-//               <TabsContent value="leaderboard">
-//                 <div className="mt-6 text-center">
-//                   <p className="text-gray-600 dark:text-white">
-//                     View the global leaderboard to see how you rank among all
-//                     users!
-//                   </p>
-//                   <Button asChild className="mt-4">
-//                     <Link href="/leaderboard">Go to Leaderboard</Link>
-//                   </Button>
-//                 </div>
-//               </TabsContent>
-//             </Tabs>
-//           </CardContent>
-//           <CardFooter className="flex flex-col sm:flex-row justify-between p-6  rounded-b-lg gap-4">
-//             <Button
-//               variant="outline"
-//               onClick={handleShare}
-//               className="flex items-center gap-2 hover:bg-gray-100 transition-colors"
-//             >
-//               <Share2 className="h-4 w-4" />
-//               Share Results
-//             </Button>
-//             <Button
-//               variant="default"
-//               onClick={handleRestart}
-//               className="flex items-center gap-2  bg-amber-800"
-//             >
-//               <RotateCcw className="h-4 w-4" />
-//               Take Quiz Again
-//             </Button>
-//           </CardFooter>
-//         </Card>
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
 "use client";
 
-import { useRouter, useParams, useSearchParams } from "next/navigation";
-import { useGetAllQuestionsQuery } from "@/redux/features/quizApiSlice";
-import { useRetrieveUserQuery, useSaveQuizScoreMutation } from "@/redux/features/authApiSlice";
-// import { Progress } from "@/components/ui/progress";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import {
+  useGetAllQuestionsQuery,
+  useGetChoicesQuery,
+} from "@/redux/features/quizApiSlice";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  CardFooter,
+  CardDescription,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-// import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { CheckCircle, XCircle, ArrowLeft, Download, Send } from "lucide-react";
+import Loading from "@/loading/Loading";
+import jsPDF from "jspdf";
+import * as React from "react";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
-  BarChart,
-  CheckCircle,
-  RotateCcw,
-  Share2,
-  AlertCircle,
-  Info,
-  
-} from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+  ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  BarChart as RechartsBarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast, Toaster } from "sonner";
-import Link from "next/link";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
+// Interfaces
 interface Question {
   id: number;
   text: string;
-  questions_file_title: string;
   subject_category_name: string;
   correct_choice_id?: number;
-  choices?: Choice[];
 }
 
 interface Choice {
   id: number;
   text: string;
   is_correct: boolean;
-  question: number;
 }
 
-interface LeaderboardEntry {
-  user_id: string;
-  user_name: string;
-  score: number;
+interface ChartData {
+  subject: string;
+  correct: number;
+  incorrect: number;
 }
 
-// Custom hook to fetch choices for all questions
-// const useFetchChoices = (
-//   questions: Question[],
-//   category0: string,
-//   category1: string,
-//   quizFile: string
-// ) => {
-//   const [choicesMap, setChoicesMap] = useState<Record<number, Choice[]>>({});
-//   const [questionIds, setQuestionIds] = useState<number[]>([]);
-//   const [isLoadingChoices, setIsLoadingChoices] = useState(false);
-//   const [errorChoices, setErrorChoices] = useState<string | null>(null);
+// Chart Config
+const chartConfig = {
+  performance: {
+    label: "Performance",
+  },
+  correct: {
+    label: "Correct Answers",
+    color: "#10B981",
+  },
+  incorrect: {
+    label: "Incorrect Answers",
+    color: "#EF4444",
+  },
+} satisfies ChartConfig;
 
-//   useEffect(() => {
-//     if (questions.length > 0) {
-//       setQuestionIds(questions.map((q) => q.id));
-//     }
-//   }, [questions]);
+// ResultAnalysis Component
+function ResultAnalysis() {
+  const [viewMode, setViewMode] = React.useState("all");
+  const {
+    category0,
+    category1,
+    quizFile: rawQuizFile,
+  } = useParams() as { category0: string; category1: string; quizFile: string };
+  const quizFile = decodeURIComponent(rawQuizFile);
 
-//   useEffect(() => {
-//     if (questionIds.length === 0) return;
-
-//     const fetchChoices = async () => {
-//       setIsLoadingChoices(true);
-//       setErrorChoices(null);
-//       try {
-//         for (const questionId of questionIds) {
-//           const response = await fetch(
-//             `/api/${category0}/${category1}/${quizFile}/${questionId}/choices/`
-//           );
-//           console.log(" Fetching choice for response:", response);
-//           console.log("Parameters:",{ category0, category1, quizFile, questionId})
-//           if (response.ok) {
-//             const choices: Choice[] = await response.json();
-//             setChoicesMap((prev) => ({
-//               ...prev,
-//               [questionId]: choices,
-//             }));
-//           } else {
-//             throw new Error(`Failed to fetch choices for question ${questionId}:${response.status} ${response.statusText}`);
-//           }
-//         }
-//       } catch (error) {
-//         console.error("Error fetching choices:", error);
-//         setErrorChoices("Failed to load answer choices. Please try again.");
-//       } finally {
-//         setIsLoadingChoices(false);
-//       }
-//     };
-
-//     fetchChoices();
-//   }, [questionIds, category0, category1, quizFile]);
-
-//   return { choicesMap, isLoadingChoices, errorChoices };
-// };
-
-// src/app/quiz-app/category/[category0]/[category1]/[quizFile]/results/[quizId]/page.tsx
-const useFetchChoices = (
-  questions: Question[],
-  category0: string,
-  category1: string,
-  quizFile: string
-) => {
-  const [choicesMap, setChoicesMap] = useState<Record<number, Choice[]>>({});
-  const [isLoadingChoices, setIsLoadingChoices] = useState(false);
-  const [errorChoices, setErrorChoices] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (questions.length > 0) {
-      const fetchChoices = async () => {
-        setIsLoadingChoices(true);
-        setErrorChoices(null);
-        try {
-          for (const question of questions) {
-            const { data: choices, error, isLoading } = useGetChoicesForQuestionQuery({
-              category0,
-              category1,
-              quizFile,
-              questionId: question.id,
-            });
-            if (isLoading) continue; // Skip if still loading
-            if (error) {
-              console.warn(`No choices found for question ${question.id}: ${error}`);
-              setChoicesMap((prev) => ({
-                ...prev,
-                [question.id]: [],
-              }));
-            } else if (choices) {
-              setChoicesMap((prev) => ({
-                ...prev,
-                [question.id]: choices,
-              }));
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching choices:", error);
-          setErrorChoices("Failed to load some answer choices. Some answers may be missing.");
-        } finally {
-          setIsLoadingChoices(false);
-        }
-      };
-
-      fetchChoices();
+  const [selectedChoices, setSelectedChoices] = React.useState<
+    Record<number, number>
+  >({});
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const choicesParam = urlParams.get("choices");
+    console.log("URL Choices Param:", choicesParam); // Debug
+    if (choicesParam) {
+      setSelectedChoices(JSON.parse(decodeURIComponent(choicesParam)));
     }
-  }, [questions, category0, category1, quizFile]);
+  }, []);
 
-  return { choicesMap, isLoadingChoices, errorChoices };
-};
-export default function ResultsPage() {
+  const { data: allQuestions = [], isLoading } = useGetAllQuestionsQuery({
+    category0,
+    category1,
+    quizFile,
+  });
+
+  const chartData: ChartData[] = React.useMemo(() => {
+    console.log("allQuestions:", allQuestions); // Debug
+    console.log("selectedChoices:", selectedChoices); // Debug
+    if (!allQuestions.length || !Object.keys(selectedChoices).length) return [];
+
+    const subjectStats = allQuestions.reduce((acc, question) => {
+      const subject = question.subject_category_name;
+      if (!acc[subject]) {
+        acc[subject] = { correct: 0, incorrect: 0, total: 0 };
+      }
+      acc[subject].total += 1;
+      const selectedChoice = selectedChoices[question.id];
+      const isCorrect = question.correct_choice_id
+        ? selectedChoice === question.correct_choice_id
+        : false;
+      if (isCorrect) {
+        acc[subject].correct += 1;
+      } else if (selectedChoice) {
+        acc[subject].incorrect += 1;
+      }
+      return acc;
+    }, {} as Record<string, { correct: number; incorrect: number; total: number }>);
+
+    const result = Object.entries(subjectStats).map(([subject, stats]) => ({
+      subject,
+      correct: stats.correct,
+      incorrect: stats.incorrect,
+    }));
+    console.log("chartData:", result); // Debug
+    return result;
+  }, [allQuestions, selectedChoices]);
+
+  const filteredData = chartData.filter((item) =>
+    viewMode === "all" ? true : item.subject === viewMode
+  );
+
+  if (isLoading) {
+    return;
+    <Loading />;
+  }
+
+  if (!chartData.length) {
+    return <div>No quiz data available to display.</div>;
+  }
+
+  const subjects = Array.from(new Set(chartData.map((item) => item.subject)));
+
+  return (
+    <Card className="mb-6">
+      <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
+        <div className="grid flex-1 gap-1 text-center sm:text-left">
+          <CardTitle>Quiz Performance Analysis</CardTitle>
+          <CardDescription>
+            Showing your performance by subject category
+          </CardDescription>
+        </div>
+        <Select value={viewMode} onValueChange={setViewMode}>
+          <SelectTrigger
+            className="w-[160px] rounded-lg sm:ml-auto"
+            aria-label="Select view mode"
+          >
+            <SelectValue placeholder="All Subjects" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl">
+            <SelectItem value="all" className="rounded-lg">
+              All Subjects
+            </SelectItem>
+            {subjects.map((subject) => (
+              <SelectItem key={subject} value={subject} className="rounded-lg">
+                {subject}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </CardHeader>
+      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+        <ChartContainer
+          config={chartConfig}
+          className="aspect-auto h-[300px] w-full"
+        >
+          <AreaChart data={filteredData}>
+            <defs>
+              <linearGradient id="fillCorrect" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="var(--color-correct)"
+                  stopOpacity={0.8}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--color-correct)"
+                  stopOpacity={0.1}
+                />
+              </linearGradient>
+              <linearGradient id="fillIncorrect" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="var(--color-incorrect)"
+                  stopOpacity={0.8}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="var(--color-incorrect)"
+                  stopOpacity={0.1}
+                />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="subject"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) =>
+                value.slice(0, 10) + (value.length > 10 ? "..." : "")
+              }
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              label={{
+                value: "Number of Questions",
+                angle: -90,
+                position: "insideLeft",
+              }}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="dot" />}
+            />
+            <Area
+              dataKey="correct"
+              type="natural"
+              fill="url(#fillCorrect)"
+              stroke="var(--color-correct)"
+              stackId="a"
+            />
+            <Area
+              dataKey="incorrect"
+              type="natural"
+              fill="url(#fillIncorrect)"
+              stroke="var(--color-incorrect)"
+              stackId="a"
+            />
+            <ChartLegend content={<ChartLegendContent />} />
+          </AreaChart>
+        </ChartContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Main QuizResultsPage Component
+export default function QuizResultsPage() {
   const router = useRouter();
   const {
     category0,
@@ -749,163 +269,66 @@ export default function ResultsPage() {
     quizFile: string;
     quizId: string;
   };
-  const searchParams = useSearchParams();
   const quizFile = decodeURIComponent(rawQuizFile);
 
-  // Parse selected choices with error handling
-  const selectedChoices = useMemo(() => {
-    let choices: Record<number, number> = {};
-    try {
-      const choicesParam = searchParams.get("choices");
-      if (choicesParam) {
-        choices = JSON.parse(decodeURIComponent(choicesParam)) as Record<number, number>;
-        console.log("Parsed selectedChoices:", choices);
-      } else {
-        console.warn("No choices found in URL query parameter.");
-      }
-    } catch (error) {
-      console.error("Error parsing selectedChoices:", error);
-      toast.error("Error", {
-        description: "Failed to load your selected answers.",
-      });
+  const [selectedChoices, setSelectedChoices] = useState<
+    Record<number, number>
+  >({});
+  const [timeTaken, setTimeTaken] = useState<string | null>(null);
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const choicesParam = urlParams.get("choices");
+    const timeParam = urlParams.get("time");
+    if (choicesParam) {
+      setSelectedChoices(JSON.parse(decodeURIComponent(choicesParam)));
     }
-    return choices;
-  }, [searchParams]);
+    if (timeParam) {
+      setTimeTaken(decodeURIComponent(timeParam));
+    }
+  }, []);
 
   const {
     data: allQuestions = [],
-    isLoading: isLoadingQuestions,
+    isLoading: questionsLoading,
     error: questionsError,
   } = useGetAllQuestionsQuery({ category0, category1, quizFile });
 
-  const { choicesMap, isLoadingChoices, errorChoices } = useFetchChoices(
-    allQuestions,
-    category0,
-    category1,
-    quizFile
-  );
-
-  const { data: currentUser, error: userError } = useRetrieveUserQuery();
-  const [saveQuizScore] = useSaveQuizScoreMutation();
-
-  const [correctCount, setCorrectCount] = useState(0);
-  const [scorePercentage, setScorePercentage] = useState(0);
-
-  const handleRestart = () => {
-    toast.success("Quiz Restarted", {
-      description: "You're ready to take the quiz again! Good luck!",
-    });
-    router.push(`/quiz/${category0}/${category1}/${rawQuizFile}`);
-  };
-
-  const handleShare = () => {
-    const shareUrl = window.location.href;
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      toast.success("Results Shared", {
-        description: "The results URL has been copied to your clipboard!",
-      });
-    });
-  };
-
-  // Calculate performance metrics
-  const answeredCount = Object.keys(selectedChoices).length;
-  const totalQuestions = allQuestions.length;
-
+  const [score, setScore] = useState<number | null>(null);
+  const [scoreBySubject, setScoreBySubject] = useState<
+    Record<string, { correct: number; total: number }>
+  >({});
   useEffect(() => {
-    if (isLoadingQuestions || isLoadingChoices || !allQuestions.length) return;
+    if (allQuestions.length > 0 && Object.keys(selectedChoices).length > 0) {
+      const correctCount = allQuestions.reduce((acc, question) => {
+        const selectedChoice = selectedChoices[question.id];
+        const isCorrect = question.correct_choice_id
+          ? selectedChoice === question.correct_choice_id
+          : false;
+        return acc + (isCorrect ? 1 : 0);
+      }, 0);
+      setScore(correctCount);
 
-    let newCorrectCount = 0;
-    allQuestions.forEach((question) => {
-      const choices = choicesMap[question.id] || [];
-      const selectedChoice = choices.find(
-        (choice) => choice.id === selectedChoices[question.id]
-      );
-      if (selectedChoice && selectedChoice.is_correct) {
-        newCorrectCount++;
-      }
-    });
-    setCorrectCount(newCorrectCount);
-    setScorePercentage(totalQuestions > 0 ? (newCorrectCount / totalQuestions) * 100 : 0);
-  }, [allQuestions, choicesMap, selectedChoices, isLoadingQuestions, isLoadingChoices, totalQuestions]);
-
-  // Save the user's score to the leaderboard
-  useEffect(() => {
-    const saveScore = async () => {
-      if (!currentUser) {
-        console.error("User not authenticated");
-        toast.error("Authentication Required", {
-          description: "Please log in to save your score.",
-        });
-        return;
-      }
-
-      const userId = currentUser.id || currentUser.email;
-      const userName = `${currentUser.first_name} ${currentUser.last_name}`;
-
-      try {
-        await saveQuizScore({
-          user_id: userId,
-          user_name: userName,
-          category0,
-          category1,
-          quiz_file: quizFile,
-          quiz_id: quizId,
-          score: correctCount,
-        }).unwrap();
-        toast.success("Score Saved", {
-          description: "Your score has been added to the leaderboard!",
-        });
-      } catch (error) {
-        console.error("Error saving score to leaderboard:", error);
-        toast.error("Error", {
-          description: "Failed to save your score to the leaderboard.",
-        });
-      }
-    };
-
-    if (correctCount > 0 && totalQuestions > 0 && currentUser && !isLoadingChoices) {
-      saveScore();
+      const breakdown = allQuestions.reduce((acc, question) => {
+        const subject = question.subject_category_name;
+        if (!acc[subject]) {
+          acc[subject] = { correct: 0, total: 0 };
+        }
+        acc[subject].total += 1;
+        const isCorrect =
+          selectedChoices[question.id] === question.correct_choice_id;
+        if (isCorrect) acc[subject].correct += 1;
+        return acc;
+      }, {} as Record<string, { correct: number; total: number }>);
+      setScoreBySubject(breakdown);
     }
-  }, [correctCount, totalQuestions, category0, category1, quizFile, quizId, currentUser, saveQuizScore, isLoadingChoices]);
+  }, [allQuestions, selectedChoices]);
 
-  // Group questions by subject for category-wise performance
-  const performanceBySubject = allQuestions.reduce((acc, question) => {
-    const subject = question.subject_category_name;
-    if (!acc[subject]) {
-      acc[subject] = { total: 0, correct: 0 };
-    }
-    acc[subject].total += 1;
-    const choices = choicesMap[question.id] || [];
-    const selectedChoice = choices.find(
-      (choice) => choice.id === selectedChoices[question.id]
-    );
-    if (selectedChoice && selectedChoice.is_correct) {
-      acc[subject].correct += 1;
-    }
-    return acc;
-  }, {} as Record<string, { total: number; correct: number }>);
+  const [feedback, setFeedback] = useState("");
 
-  const barChartData = Object.entries(performanceBySubject).map(
-    ([subject, { correct, total }]) => ({
-      name: subject,
-      correct,
-      incorrect: total - correct,
-      total,
-    })
-  );
-
-  if (isLoadingQuestions) {
+  if (questionsLoading) {
     return (
-      <div className="container mx-auto p-4 lg:p-8">
-        <div className="max-w-5xl mx-auto space-y-6">
-          <Skeleton className="h-32 w-full rounded-lg" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            <Skeleton className="h-40 w-full rounded-lg" />
-            <Skeleton className="h-40 w-full rounded-lg" />
-            <Skeleton className="h-40 w-full rounded-lg" />
-          </div>
-          <Skeleton className="h-64 w-full rounded-lg" />
-        </div>
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loading />
       </div>
     );
   }
@@ -913,280 +336,873 @@ export default function ResultsPage() {
   if (questionsError) {
     return (
       <div className="p-8 text-center text-destructive">
-        Error: {(questionsError as Error).message}
+        Error: {(questionsError as Error)?.message}
       </div>
     );
   }
 
-  if (userError) {
-    return (
-      <div className="p-8 text-center text-destructive">
-        Error: Please log in to view your results.
-      </div>
+  const totalQuestions = allQuestions.length;
+  const percentage = score !== null ? (score / totalQuestions) * 100 : 0;
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(`Quiz Results: ${quizFile}`, 20, 20);
+    doc.setFontSize(12);
+    doc.text(`${category0} / ${category1}`, 20, 30);
+    doc.text(
+      `Score: ${score}/${totalQuestions} (${Math.round(percentage)}%)`,
+      20,
+      40
     );
-  }
+    if (timeTaken) doc.text(`Time Taken: ${timeTaken}`, 20, 50);
+
+    let y = 60;
+    doc.text("Score Breakdown by Subject:", 20, y);
+    y += 10;
+    Object.entries(scoreBySubject).forEach(([subject, { correct, total }]) => {
+      doc.text(`${subject}: ${correct}/${total}`, 20, y);
+      y += 10;
+    });
+
+    y += 10;
+    doc.text("Your Answers:", 20, y);
+    y += 10;
+    allQuestions.forEach((q, index) => {
+      const selectedChoice = choicesForQuestion(q.id)?.find(
+        (c) => c.id === selectedChoices[q.id]
+      );
+      const correctChoice = choicesForQuestion(q.id)?.find(
+        (c) => c.id === q.correct_choice_id
+      );
+      doc.text(`${index + 1}. ${q.text}`, 20, y, { maxWidth: 160 });
+      y += 10;
+      doc.text(`Your Answer: ${selectedChoice?.text || "Not answered"}`, 30, y);
+      y += 10;
+      doc.text(`Correct Answer: ${correctChoice?.text}`, 30, y);
+      y += 10;
+    });
+
+    doc.save(`${quizFile}_results.pdf`);
+  };
+
+  const choicesForQuestion = (questionId: number) => {
+    const { data: choices = [] } = useGetChoicesQuery({
+      category0,
+      category1,
+      quizFile,
+      questionId,
+    });
+    return choices;
+  };
+
+  const handleRetryQuiz = () => {
+    router.push(`/quiz-app/category/${category0}/${category1}/${quizFile}`);
+  };
+
+  const handleFeedbackSubmit = () => {
+    console.log("Feedback submitted:", feedback);
+    setFeedback("");
+    alert("Thank you for your feedback!");
+  };
 
   return (
     <div className="container mx-auto p-4 lg:p-8">
-      <Toaster />
-      <div className="max-w-5xl mx-auto space-y-6">
-        <Card className="shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-lg">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <CardTitle className="text-3xl font-bold">Quiz Results</CardTitle>
-                <p className="text-blue-100 mt-2">
-                  {category0} / {category1}
-                </p>
-              </div>
-              <div className="flex flex-col items-start sm:items-end gap-2">
-                <Badge variant="secondary" className="text-lg bg-white text-blue-600">
-                  {quizFile}
-                </Badge>
-                <Badge variant="outline" className="text-sm bg-transparent text-white border-white">
-                  ID: {quizId}
-                </Badge>
-              </div>
+      <header className="mb-8">
+        <Button
+          variant="outline"
+          onClick={() =>
+            router.push(
+              `/quiz-app/category/${category0}/${category1}/${quizFile}`
+            )
+          }
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Quiz
+        </Button>
+        <div className="text-center">
+          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+            Quiz Results: {quizFile}
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            {category0} / {category1}
+          </p>
+          <div className="mt-4 flex flex-col items-center gap-4">
+            <Badge variant="secondary" className="text-lg py-2 px-4">
+              Score: {score}/{totalQuestions} ({Math.round(percentage)}%)
+            </Badge>
+            {timeTaken && (
+              <Badge variant="outline">Time Taken: {timeTaken}</Badge>
+            )}
+            <div className="text-sm text-muted-foreground">
+              Completed on {new Date().toLocaleDateString()}
             </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <Tabs defaultValue="summary" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="summary">Summary</TabsTrigger>
-                <TabsTrigger value="analytics">Analytics</TabsTrigger>
-                <TabsTrigger value="answers">Answers</TabsTrigger>
-                <TabsTrigger value="leaderboard">
-                  <Link href="/leaderboard">Leaderboard</Link>
-                </TabsTrigger>
-              </TabsList>
+          </div>
+        </div>
+      </header>
 
-              {/* Summary Tab */}
-              <TabsContent value="summary">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-6">
-                  <div className="text-center p-6 bg-gray-50 rounded-lg shadow-sm">
-                    <BarChart className="h-10 w-10 mx-auto mb-3 text-blue-600" />
-                    <p className="text-sm text-gray-500">Total Questions</p>
-                    <p className="text-3xl font-bold text-gray-800">{totalQuestions}</p>
-                  </div>
-                  <div className="text-center p-6 bg-gray-50 rounded-lg shadow-sm">
-                    <CheckCircle className="h-10 w-10 mx-auto mb-3 text-green-500" />
-                    <p className="text-sm text-gray-500">Correct Answers</p>
-                    {isLoadingChoices ? (
-                      <Skeleton className="h-8 w-16 mx-auto" />
-                    ) : (
-                      <p className="text-3xl font-bold text-gray-800">{correctCount}</p>
-                    )}
-                  </div>
-                  <div className="text-center p-6 bg-gray-50 rounded-lg shadow-sm">
-                    <div className="relative w-24 h-24 mx-auto mb-3">
-                      {isLoadingChoices ? (
-                        <Skeleton className="h-24 w-24 rounded-full" />
-                      ) : (
-                        <svg className="w-full h-full" viewBox="0 0 36 36">
-                          <path
-                            d="M18 2.0845
-                              a 15.9155 15.9155 0 0 1 0 31.831
-                              a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none"
-                            stroke="#E5E7EB"
-                            strokeWidth="3"
-                          />
-                          <path
-                            d="M18 2.0845
-                              a 15.9155 15.9155 0 0 1 0 31.831
-                              a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none"
-                            stroke="#3B82F6"
-                            strokeWidth="3"
-                            strokeDasharray={`${scorePercentage}, 100`}
-                          />
-                          <text
-                            x="18"
-                            y="20.35"
-                            className="text-lg font-bold text-gray-800"
-                            textAnchor="middle"
-                          >
-                            {Math.round(scorePercentage)}%
-                          </text>
-                        </svg>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-500">Score</p>
-                  </div>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Score Breakdown by Subject</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.entries(scoreBySubject).map(
+              ([subject, { correct, total }]) => (
+                <div
+                  key={subject}
+                  className="flex items-center justify-between p-2 border rounded-md"
+                >
+                  <span>{subject}</span>
+                  <Badge variant="outline">
+                    {correct}/{total} ({Math.round((correct / total) * 100)}%)
+                  </Badge>
                 </div>
-              </TabsContent>
+              )
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-              {/* Analytics Tab */}
-              <TabsContent value="analytics">
-                <div className="mt-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <h3 className="text-2xl font-semibold text-gray-800 dark:text-white">
-                      Performance by Subject
-                    </h3>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Info className="h-5 w-5 text-gray-500" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Shows the number of correct and incorrect answers per subject.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <div className="h-64">
-                    {isLoadingChoices ? (
-                      <Skeleton className="h-64 w-full rounded-lg" />
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsBarChart data={barChartData}>
-                          <XAxis dataKey="name" />
-                          <YAxis />
-                          <Legend />
-                          <Bar
-                            dataKey="correct"
-                            stackId="a"
-                            fill="#10B981"
-                            name="Correct"
-                            radius={[8, 8, 0, 0]}
-                          />
-                          <Bar
-                            dataKey="incorrect"
-                            stackId="a"
-                            fill="#EF4444"
-                            name="Incorrect"
-                            radius={[8, 8, 0, 0]}
-                          />
-                        </RechartsBarChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                </div>
-              </TabsContent>
+      <ResultAnalysis />
 
-              {/* Answers Tab */}
-              <TabsContent value="answers">
-                <div className="mt-6">
-                  <h3 className="text-2xl font-semibold mb-4 text-gray-800">
-                    Your Answers
-                  </h3>
-                  {isLoadingChoices ? (
-                    <div className="space-y-4">
-                      {[...Array(5)].map((_, i) => (
-                        <Skeleton key={i} className="h-12 w-full rounded-lg" />
-                      ))}
-                    </div>
-                  ) : errorChoices ? (
-                    <div className="p-6 text-center text-destructive">
-                      {errorChoices}
-                    </div>
-                  ) : (
-                    <ScrollArea className="h-[50vh] rounded-md border">
-                      <Accordion type="multiple" className="p-4 space-y-4">
-                        {allQuestions.map((question, index) => {
-                          const choices = choicesMap[question.id] || [];
-                          const selectedChoice = choices.find(
-                            (choice) => choice.id === selectedChoices[question.id]
-                          );
-                          const correctChoice = choices.find((choice) => choice.is_correct);
-                          const isCorrect = selectedChoice?.is_correct || false;
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Your Answers</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[50vh] pr-4">
+            <div className="space-y-6">
+              {allQuestions.map((question: Question) => (
+                <QuestionResult
+                  key={question.id}
+                  question={question}
+                  selectedChoiceId={selectedChoices[question.id]}
+                  category0={category0}
+                  category1={category1}
+                  quizFile={quizFile}
+                />
+              ))}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
 
-                          return (
-                            <AccordionItem key={question.id} value={`item-${question.id}`}>
-                              <AccordionTrigger className="text-left hover:bg-gray-50 p-2 rounded-md">
-                                <div className="flex items-center justify-between w-full">
-                                  <span className="text-lg font-medium">
-                                    {index + 1}. {question.text}
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    {selectedChoices[question.id] ? (
-                                      isCorrect ? (
-                                        <CheckCircle className="h-5 w-5 text-green-500" />
-                                      ) : (
-                                        <AlertCircle className="h-5 w-5 text-red-500" />
-                                      )
-                                    ) : (
-                                      <span className="text-gray-500 text-sm">Not answered</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="pl-6">
-                                <div className="space-y-2">
-                                  <p className="text-sm text-gray-600">
-                                    <span className="font-medium">Your Answer:</span>{" "}
-                                    {selectedChoice ? (
-                                      isCorrect ? (
-                                        <span className="text-green-600">{selectedChoice.text}</span>
-                                      ) : (
-                                        <span className="text-red-600">{selectedChoice.text}</span>
-                                      )
-                                    ) : (
-                                      <span className="text-gray-500">Not answered</span>
-                                    )}
-                                  </p>
-                                  {correctChoice ? (
-                                    <p className="text-sm text-gray-600">
-                                      <span className="font-medium">Correct Answer:</span>{" "}
-                                      <span className="text-green-600">{correctChoice.text}</span>
-                                    </p>
-                                  ) : (
-                                    <p className="text-sm text-gray-600">
-                                      <span className="font-medium">Correct Answer:</span>{" "}
-                                      <span className="text-gray-500">Not available</span>
-                                    </p>
-                                  )}
-                                  <p className="text-sm text-gray-500">
-                                    Subject: {question.subject_category_name}
-                                  </p>
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          );
-                        })}
-                      </Accordion>
-                    </ScrollArea>
-                  )}
-                </div>
-              </TabsContent>
-
-              {/* Leaderboard Tab (Now a Link) */}
-              <TabsContent value="leaderboard">
-                <div className="mt-6 text-center">
-                  <p className="text-gray-600">
-                    View the global leaderboard to see how you rank among all users!
-                  </p>
-                  <Button asChild className="mt-4">
-                    <Link href="/leaderboard">Go to Leaderboard</Link>
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-          <CardFooter className="flex flex-col sm:flex-row justify-between p-6 bg-gray-50 rounded-b-lg gap-4">
-            <Button
-              variant="outline"
-              onClick={handleShare}
-              className="flex items-center gap-2 hover:bg-gray-100 transition-colors"
-            >
-              <Share2 className="h-4 w-4" />
-              Share Results
-            </Button>
-            <Button
-              variant="default"
-              onClick={handleRestart}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 transition-colors"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Take Quiz Again
-            </Button>
-          </CardFooter>
-        </Card>
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <Button onClick={handleRetryQuiz} variant="outline" className="flex-1">
+          Retry Quiz
+        </Button>
+        <Button onClick={exportToPDF} variant="outline" className="flex-1">
+          <Download className="mr-2 h-4 w-4" />
+          Export as PDF
+        </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Provide Feedback</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder="Let us know your thoughts about this quiz..."
+            className="mb-4"
+          />
+          <Button onClick={handleFeedbackSubmit} disabled={!feedback.trim()}>
+            <Send className="mr-2 h-4 w-4" />
+            Submit Feedback
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-function useGetChoicesForQuestionQuery(arg0: { category0: string; category1: string; quizFile: string; questionId: number; }): { data: any; error: any; isLoading: any; } {
-  throw new Error("Function not implemented.");
+// QuestionResult Component
+function QuestionResult({
+  question,
+  selectedChoiceId,
+  category0,
+  category1,
+  quizFile,
+}: {
+  question: Question;
+  selectedChoiceId?: number;
+  category0: string;
+  category1: string;
+  quizFile: string;
+}) {
+  const {
+    data: choices = [],
+    isLoading,
+    error,
+  } = useGetChoicesQuery({
+    category0,
+    category1,
+    quizFile,
+    questionId: question.id,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-4">
+        <Loading />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-md bg-destructive/10 p-4 text-center text-destructive">
+        Error loading choices
+      </div>
+    );
+  }
+
+  const correctChoiceId =
+    question.correct_choice_id || choices.find((c) => c.is_correct)?.id;
+  const isCorrect = selectedChoiceId === correctChoiceId;
+  const cardClass = isCorrect
+    ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+    : selectedChoiceId
+    ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+    : "border-muted";
+
+  return (
+    <Card className={`transition-all ${cardClass}`}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <Badge variant="outline">{question.subject_category_name}</Badge>
+          {isCorrect ? (
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+          ) : selectedChoiceId ? (
+            <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+          ) : null}
+        </div>
+        <CardTitle className="text-lg">{question.text}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {choices.map((choice: Choice) => {
+            const isSelected = choice.id === selectedChoiceId;
+            const isCorrectChoice = choice.id === correctChoiceId;
+            const textClass = isSelected
+              ? isCorrectChoice
+                ? "text-green-700 dark:text-green-300 font-medium"
+                : "text-red-700 dark:text-red-300 font-medium"
+              : isCorrectChoice
+              ? "text-green-600 dark:text-green-400"
+              : "text-foreground";
+
+            return (
+              <div
+                key={choice.id}
+                className="flex items-start gap-2 rounded-md p-2 hover:bg-muted/50"
+              >
+                <span
+                  className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                    isSelected
+                      ? isCorrectChoice
+                        ? "border-green-500 bg-green-200 dark:bg-green-700"
+                        : "border-red-500 bg-red-200 dark:bg-red-700"
+                      : "border-muted"
+                  }`}
+                >
+                  {isSelected && (
+                    <span
+                      className={
+                        isCorrectChoice
+                          ? "h-2 w-2 rounded-full bg-green-600 dark:bg-green-400"
+                          : "h-2 w-2 rounded-full bg-red-600 dark:bg-red-400"
+                      }
+                    />
+                  )}
+                </span>
+                <p className={textClass}>
+                  {choice.text}
+                  {isCorrectChoice && !isSelected && " (Correct)"}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+      <Separator />
+    </Card>
+  );
 }
+
+// "use client";
+
+// import { useEffect, useState } from "react";
+// import { useParams, useRouter } from "next/navigation";
+// import {
+//   useGetAllQuestionsQuery,
+//   useGetChoicesQuery,
+// } from "@/redux/features/quizApiSlice";
+// import { Button } from "@/components/ui/button";
+// import {
+//   Card,
+//   CardContent,
+//   CardHeader,
+//   CardTitle,
+//   CardDescription,
+// } from "@/components/ui/card";
+// import { ScrollArea } from "@/components/ui/scroll-area";
+// import { Badge } from "@/components/ui/badge";
+// import { Separator } from "@/components/ui/separator";
+// import { Textarea } from "@/components/ui/textarea";
+// import { CheckCircle, XCircle, ArrowLeft, Download, Send } from "lucide-react";
+// import Loading from "@/loading/Loading";
+// import jsPDF from "jspdf";
+// import * as React from "react";
+// import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+// import {
+//   ChartConfig,
+//   ChartContainer,
+//   ChartLegend,
+//   ChartLegendContent,
+//   ChartTooltip,
+//   ChartTooltipContent,
+// } from "@/components/ui/chart";
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from "@/components/ui/select";
+
+// // Interfaces
+// interface Question {
+//   id: number;
+//   text: string;
+//   subject_category_name: string;
+//   correct_choice_id?: number;
+// }
+
+// interface Choice {
+//   id: number;
+//   text: string;
+//   is_correct: boolean;
+// }
+
+// interface ChartData {
+//   subject: string;
+//   correct: number;
+//   incorrect: number;
+// }
+
+// // Chart Config
+// const chartConfig = {
+//   performance: { label: "Performance" },
+//   correct: { label: "Correct Answers", color: "#10B981" },
+//   incorrect: { label: "Incorrect Answers", color: "#EF4444" },
+// } satisfies ChartConfig;
+
+// // ResultAnalysis Component
+// function ResultAnalysis({
+//   allQuestions,
+//   selectedChoices,
+// }: {
+//   allQuestions: Question[];
+//   selectedChoices: Record<number, number>;
+// }) {
+//   const [viewMode, setViewMode] = React.useState("all");
+
+//   const chartData: ChartData[] = React.useMemo(() => {
+//     if (!allQuestions.length || !Object.keys(selectedChoices).length) return [];
+
+//     const subjectStats = allQuestions.reduce((acc, question) => {
+//       const subject = question.subject_category_name;
+//       if (!acc[subject]) {
+//         acc[subject] = { correct: 0, incorrect: 0, total: 0 };
+//       }
+//       acc[subject].total += 1;
+//       const selectedChoice = selectedChoices[question.id];
+//       const isCorrect = question.correct_choice_id
+//         ? selectedChoice === question.correct_choice_id
+//         : false;
+//       if (isCorrect) {
+//         acc[subject].correct += 1;
+//       } else if (selectedChoice) {
+//         acc[subject].incorrect += 1;
+//       }
+//       return acc;
+//     }, {} as Record<string, { correct: number; incorrect: number; total: number }>);
+
+//     return Object.entries(subjectStats).map(([subject, stats]) => ({
+//       subject,
+//       correct: stats.correct,
+//       incorrect: stats.incorrect,
+//     }));
+//   }, [allQuestions, selectedChoices]);
+
+//   const filteredData = chartData.filter((item) =>
+//     viewMode === "all" ? true : item.subject === viewMode
+//   );
+
+//   if (!chartData.length) {
+//     return <div>No quiz data available to display.</div>;
+//   }
+
+//   const subjects = Array.from(new Set(chartData.map((item) => item.subject)));
+
+//   return (
+//     <Card className="mb-6">
+//       <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
+//         <div className="grid flex-1 gap-1 text-center sm:text-left">
+//           <CardTitle>Quiz Performance Analysis</CardTitle>
+//           <CardDescription>
+//             Your performance by subject category
+//           </CardDescription>
+//         </div>
+//         <Select value={viewMode} onValueChange={setViewMode}>
+//           <SelectTrigger className="w-[160px] rounded-lg sm:ml-auto">
+//             <SelectValue placeholder="All Subjects" />
+//           </SelectTrigger>
+//           <SelectContent className="rounded-xl">
+//             <SelectItem value="all">All Subjects</SelectItem>
+//             {subjects.map((subject) => (
+//               <SelectItem key={subject} value={subject}>
+//                 {subject}
+//               </SelectItem>
+//             ))}
+//           </SelectContent>
+//         </Select>
+//       </CardHeader>
+//       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+//         <ChartContainer
+//           config={chartConfig}
+//           className="aspect-auto h-[300px] w-full"
+//         >
+//           <AreaChart data={filteredData}>
+//             <defs>
+//               <linearGradient id="fillCorrect" x1="0" y1="0" x2="0" y2="1">
+//                 <stop offset="5%" stopColor="#10B981" stopOpacity={0.8} />
+//                 <stop offset="95%" stopColor="#10B981" stopOpacity={0.1} />
+//               </linearGradient>
+//               <linearGradient id="fillIncorrect" x1="0" y1="0" x2="0" y2="1">
+//                 <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8} />
+//                 <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1} />
+//               </linearGradient>
+//             </defs>
+//             <CartesianGrid vertical={false} />
+//             <XAxis
+//               dataKey="subject"
+//               tickLine={false}
+//               axisLine={false}
+//               tickMargin={8}
+//               tickFormatter={(value) =>
+//                 value.slice(0, 10) + (value.length > 10 ? "..." : "")
+//               }
+//             />
+//             <YAxis
+//               tickLine={false}
+//               axisLine={false}
+//               tickMargin={8}
+//               label={{
+//                 value: "Number of Questions",
+//                 angle: -90,
+//                 position: "insideLeft",
+//               }}
+//             />
+//             <ChartTooltip
+//               cursor={false}
+//               content={<ChartTooltipContent indicator="dot" />}
+//             />
+//             <Area
+//               dataKey="correct"
+//               type="natural"
+//               fill="url(#fillCorrect)"
+//               stroke="#10B981"
+//               stackId="a"
+//             />
+//             <Area
+//               dataKey="incorrect"
+//               type="natural"
+//               fill="url(#fillIncorrect)"
+//               stroke="#EF4444"
+//               stackId="a"
+//             />
+//             <ChartLegend content={<ChartLegendContent />} />
+//           </AreaChart>
+//         </ChartContainer>
+//       </CardContent>
+//     </Card>
+//   );
+// }
+
+// // Main QuizResultsPage Component
+// export default function QuizResultsPage() {
+//   const router = useRouter();
+//   const {
+//     category0,
+//     category1,
+//     quizFile: rawQuizFile,
+//     quizId,
+//   } = useParams() as {
+//     category0: string;
+//     category1: string;
+//     quizFile: string;
+//     quizId: string;
+//   };
+//   const quizFile = decodeURIComponent(rawQuizFile);
+
+//   const [selectedChoices, setSelectedChoices] = useState<
+//     Record<number, number>
+//   >({});
+//   const [timeTaken, setTimeTaken] = useState<string | null>(null);
+//   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+//   useEffect(() => {
+//     if (!isInitialLoad) return;
+//     const urlParams = new URLSearchParams(window.location.search);
+//     const choicesParam = urlParams.get("choices");
+//     const timeParam = urlParams.get("time");
+//     if (choicesParam) {
+//       try {
+//         setSelectedChoices(JSON.parse(decodeURIComponent(choicesParam)));
+//       } catch (error) {
+//         console.error("Failed to parse choices:", error);
+//       }
+//     }
+//     if (timeParam) {
+//       setTimeTaken(decodeURIComponent(timeParam));
+//     }
+//     setIsInitialLoad(false);
+//   }, [isInitialLoad]);
+
+//   const {
+//     data: allQuestions = [],
+//     isLoading: questionsLoading,
+//     error: questionsError,
+//   } = useGetAllQuestionsQuery({ category0, category1, quizFile });
+
+//   const [score, setScore] = useState<number | null>(null);
+//   const [scoreBySubject, setScoreBySubject] = useState<
+//     Record<string, { correct: number; total: number }>
+//   >({});
+
+//   useEffect(() => {
+//     if (allQuestions.length > 0 && Object.keys(selectedChoices).length > 0) {
+//       const correctCount = allQuestions.reduce((acc, question) => {
+//         const selectedChoice = selectedChoices[question.id];
+//         const isCorrect = question.correct_choice_id
+//           ? selectedChoice === question.correct_choice_id
+//           : false;
+//         return acc + (isCorrect ? 1 : 0);
+//       }, 0);
+//       setScore(correctCount);
+
+//       const breakdown = allQuestions.reduce((acc, question) => {
+//         const subject = question.subject_category_name;
+//         if (!acc[subject]) {
+//           acc[subject] = { correct: 0, total: 0 };
+//         }
+//         acc[subject].total += 1;
+//         const isCorrect =
+//           selectedChoices[question.id] === question.correct_choice_id;
+//         if (isCorrect) acc[subject].correct += 1;
+//         return acc;
+//       }, {} as Record<string, { correct: number; total: number }>);
+//       setScoreBySubject(breakdown);
+//     }
+//   }, [allQuestions, selectedChoices]);
+
+//   const [feedback, setFeedback] = useState("");
+
+//   if (questionsLoading) {
+//     return (
+//       <div className="flex h-screen w-full items-center justify-center">
+//         <Loading />
+//       </div>
+//     );
+//   }
+
+//   if (questionsError) {
+//     return (
+//       <div className="p-8 text-center text-destructive">
+//         Error: {(questionsError as Error)?.message}
+//       </div>
+//     );
+//   }
+
+//   const totalQuestions = allQuestions.length;
+//   const percentage = score !== null ? (score / totalQuestions) * 100 : 0;
+
+//   const exportToPDF = () => {
+//     const doc = new jsPDF();
+//     doc.setFontSize(16);
+//     doc.text(`Quiz Results: ${quizFile}`, 20, 20);
+//     doc.setFontSize(12);
+//     doc.text(`${category0} / ${category1}`, 20, 30);
+//     doc.text(
+//       `Score: ${score}/${totalQuestions} (${Math.round(percentage)}%)`,
+//       20,
+//       40
+//     );
+//     if (timeTaken) doc.text(`Time Taken: ${timeTaken}`, 20, 50);
+
+//     let y = 60;
+//     doc.text("Score Breakdown by Subject:", 20, y);
+//     y += 10;
+//     Object.entries(scoreBySubject).forEach(([subject, { correct, total }]) => {
+//       doc.text(`${subject}: ${correct}/${total}`, 20, y);
+//       y += 10;
+//     });
+
+//     y += 10;
+//     doc.text("Your Answers:", 20, y);
+//     y += 10;
+//     allQuestions.forEach((q, index) => {
+//       const choices = choicesForQuestion(q.id);
+//       const selectedChoice = choices.find(
+//         (c) => c.id === selectedChoices[q.id]
+//       );
+//       const correctChoice = choices.find((c) => c.id === q.correct_choice_id);
+//       doc.text(`${index + 1}. ${q.text}`, 20, y, { maxWidth: 160 });
+//       y += 10;
+//       doc.text(`Your Answer: ${selectedChoice?.text || "Not answered"}`, 30, y);
+//       y += 10;
+//       doc.text(`Correct Answer: ${correctChoice?.text}`, 30, y);
+//       y += 10;
+//     });
+
+//     doc.save(`${quizFile}_results.pdf`);
+//   };
+
+//   const choicesForQuestion = (questionId: number) => {
+//     const { data: choices = [] } = useGetChoicesQuery({
+//       category0,
+//       category1,
+//       quizFile,
+//       questionId,
+//     });
+//     return choices;
+//   };
+
+//   const handleRetryQuiz = () => {
+//     router.push(`/quiz-app/category/${category0}/${category1}/${quizFile}`);
+//   };
+
+//   const handleFeedbackSubmit = () => {
+//     console.log("Feedback submitted:", feedback);
+//     setFeedback("");
+//     alert("Thank you for your feedback!");
+//   };
+
+//   return (
+//     <div className="container mx-auto p-4 lg:p-8">
+//       <header className="mb-8">
+//         <Button variant="outline" onClick={handleRetryQuiz} className="mb-4">
+//           <ArrowLeft className="mr-2 h-4 w-4" />
+//           Back to Quiz
+//         </Button>
+//         <div className="text-center">
+//           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+//             Quiz Results: {quizFile}
+//           </h1>
+//           <p className="text-muted-foreground mt-2">
+//             {category0} / {category1}
+//           </p>
+//           <div className="mt-4 flex flex-col items-center gap-4">
+//             <Badge variant="secondary" className="text-lg py-2 px-4">
+//               Score: {score ?? "N/A"}/{totalQuestions} ({Math.round(percentage)}
+//               %)
+//             </Badge>
+//             {timeTaken && (
+//               <Badge variant="outline">Time Taken: {timeTaken}</Badge>
+//             )}
+//             <div className="text-sm text-muted-foreground">
+//               Completed on {new Date().toLocaleDateString()}
+//             </div>
+//           </div>
+//         </div>
+//       </header>
+
+//       <Card className="mb-6">
+//         <CardHeader>
+//           <CardTitle>Score Breakdown by Subject</CardTitle>
+//           <CardDescription>
+//             Your performance across different subjects
+//           </CardDescription>
+//         </CardHeader>
+//         <CardContent>
+//           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//             {Object.entries(scoreBySubject).map(
+//               ([subject, { correct, total }]) => (
+//                 <div
+//                   key={subject}
+//                   className="flex items-center justify-between p-2 border rounded-md"
+//                 >
+//                   <span>{subject}</span>
+//                   <Badge variant="outline">
+//                     {correct}/{total} ({Math.round((correct / total) * 100)}%)
+//                   </Badge>
+//                 </div>
+//               )
+//             )}
+//           </div>
+//         </CardContent>
+//       </Card>
+
+//       <ResultAnalysis
+//         allQuestions={allQuestions}
+//         selectedChoices={selectedChoices}
+//       />
+
+//       <Card className="mb-6">
+//         <CardHeader>
+//           <CardTitle>Your Selected Answers</CardTitle>
+//           <CardDescription>
+//             Review your choices compared to the correct answers
+//           </CardDescription>
+//         </CardHeader>
+//         <CardContent>
+//           <ScrollArea className="h-[50vh] pr-4">
+//             <div className="space-y-6">
+//               {allQuestions.map((question) => (
+//                 <QuestionResult
+//                   key={question.id}
+//                   question={question}
+//                   selectedChoiceId={selectedChoices[question.id]}
+//                   category0={category0}
+//                   category1={category1}
+//                   quizFile={quizFile}
+//                 />
+//               ))}
+//             </div>
+//           </ScrollArea>
+//         </CardContent>
+//       </Card>
+
+//       <div className="flex flex-col md:flex-row gap-4 mb-6">
+//         <Button onClick={handleRetryQuiz} variant="outline" className="flex-1">
+//           Retry Quiz
+//         </Button>
+//         <Button onClick={exportToPDF} variant="outline" className="flex-1">
+//           <Download className="mr-2 h-4 w-4" />
+//           Export as PDF
+//         </Button>
+//       </div>
+
+//       <Card>
+//         <CardHeader>
+//           <CardTitle>Provide Feedback</CardTitle>
+//         </CardHeader>
+//         <CardContent>
+//           <Textarea
+//             value={feedback}
+//             onChange={(e) => setFeedback(e.target.value)}
+//             placeholder="Let us know your thoughts about this quiz..."
+//             className="mb-4"
+//           />
+//           <Button onClick={handleFeedbackSubmit} disabled={!feedback.trim()}>
+//             <Send className="mr-2 h-4 w-4" />
+//             Submit Feedback
+//           </Button>
+//         </CardContent>
+//       </Card>
+//     </div>
+//   );
+// }
+
+// // QuestionResult Component
+// function QuestionResult({
+//   question,
+//   selectedChoiceId,
+//   category0,
+//   category1,
+//   quizFile,
+// }: {
+//   question: Question;
+//   selectedChoiceId?: number;
+//   category0: string;
+//   category1: string;
+//   quizFile: string;
+// }) {
+//   const {
+//     data: choices = [],
+//     isLoading,
+//     error,
+//   } = useGetChoicesQuery({
+//     category0,
+//     category1,
+//     quizFile,
+//     questionId: question.id,
+//   });
+
+//   if (isLoading) {
+//     return (
+//       <div className="flex items-center justify-center py-4">
+//         <Loading />
+//       </div>
+//     );
+//   }
+
+//   if (error) {
+//     return (
+//       <div className="rounded-md bg-destructive/10 p-4 text-center text-destructive">
+//         Error loading choices
+//       </div>
+//     );
+//   }
+
+//   const correctChoiceId =
+//     question.correct_choice_id || choices.find((c) => c.is_correct)?.id;
+//   const isCorrect = selectedChoiceId === correctChoiceId;
+//   const selectedChoice = choices.find((c) => c.id === selectedChoiceId);
+//   const correctChoice = choices.find((c) => c.id === correctChoiceId);
+//   const cardClass = isCorrect
+//     ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+//     : selectedChoiceId
+//     ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+//     : "border-muted";
+
+//   return (
+//     <Card className={`transition-all ${cardClass}`}>
+//       <CardHeader>
+//         <div className="flex items-center justify-between">
+//           <Badge variant="outline">{question.subject_category_name}</Badge>
+//           {isCorrect ? (
+//             <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+//           ) : selectedChoiceId ? (
+//             <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+//           ) : null}
+//         </div>
+//         <CardTitle className="text-lg">{question.text}</CardTitle>
+//       </CardHeader>
+//       <CardContent>
+//         <div className="space-y-2">
+//           <div className="flex items-start gap-2 p-2 rounded-md bg-muted/50">
+//             <span className="h-4 w-4 rounded-full border border-blue-500 bg-blue-200 dark:bg-blue-700 flex items-center justify-center">
+//               {selectedChoice && (
+//                 <span className="h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400" />
+//               )}
+//             </span>
+//             <p className="text-blue-700 dark:text-blue-300 font-medium">
+//               Your Answer: {selectedChoice?.text || "Not answered"}
+//             </p>
+//           </div>
+//           <div className="flex items-start gap-2 p-2 rounded-md">
+//             <span className="h-4 w-4 rounded-full border border-green-500 bg-green-200 dark:bg-green-700 flex items-center justify-center">
+//               <span className="h-2 w-2 rounded-full bg-green-600 dark:bg-green-400" />
+//             </span>
+//             <p className="text-green-600 dark:text-green-400">
+//               Correct Answer: {correctChoice?.text}
+//             </p>
+//           </div>
+//           {!isCorrect && selectedChoiceId && (
+//             <p className="text-sm text-muted-foreground">
+//               Explanation: Review this question to improve next time.
+//             </p>
+//           )}
+//         </div>
+//       </CardContent>
+//       <Separator />
+//     </Card>
+//   );
+// }

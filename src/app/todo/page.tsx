@@ -1,234 +1,3 @@
-// "use client";
-
-// import { useState, useEffect } from "react";
-// import { Button } from "@/components/ui/button";
-// import { Input } from "@/components/ui/input";
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// import { Checkbox } from "@/components/ui/checkbox";
-// // import axios from "axios";
-// import { format } from "date-fns";
-// import { Task, NewTask } from "@/app/types/types";
-// import {
-//   useCreateTaskMutation,
-//   useRetrieveTasktodayQuery,
-//   useDeleteTaskMutation,
-// } from "@/redux/features/todoApiSlice";
-
-
-
-// export default function TodoPage() {
-//   const [newTask, setNewTask] = useState<NewTask>({
-//     title: "",
-//     description: "",
-//     due_date: "",
-//   });
-
-
-//   // const [loading, setLoading] = useState<boolean>(false);
-
-//   // useEffect(() => {
-//   //   fetchTasks();
-//   // }, []);
-
-
-//   // const fetchTasks = async () => {
-//   //   setLoading(true);
-//   //   try {
-//   //     const response = await axios.get<Task[]>("http://localhost:8000/todoapi/today/", {
-//   //       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-//   //     });
-//   //     setTasks(response.data);
-//   //   } catch (error) {
-//   //     console.error("Error fetching tasks:", error);
-//   //   } finally {
-//   //     setLoading(false);
-//   //   }
-//   // };
-
-//   const { data: tasks = [] as Task[], isLoading, refetch } = useRetrieveTasktodayQuery();
-
-//   // Mutations for creating and deleting tasks
-//   const [createTask] = useCreateTaskMutation();
-//   const [deleteTask] = useDeleteTaskMutation();
-
-
-
-//   // Refetch tasks on mount (optional, since RTK Query fetches automatically)
-//   useEffect(() => {
-//     refetch();
-//   }, [refetch]);
-
-//   // const handleCreateTask = async () => {
-//   //   try {
-//   //     await axios.post("http://localhost:8000/todoapi/create/", newTask, {
-//   //       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-//   //     });
-//   //     setNewTask({ title: "", description: "", due_date: "" });
-//   //     fetchTasks();
-//   //   } catch (error) {
-//   //     console.error("Error creating task:", error);
-//   //   }
-//   // };
-//   const handleCreateTask = async () => {
-//     try {
-//       await createTask(newTask).unwrap();
-//       setNewTask({ title: "", description: "", due_date: "" });
-//       refetch(); // Refetch tasks after creating
-//     } catch (error) {
-//       console.error("Error creating task:", error);
-//     }
-//   };
-
-//   // const handleToggleTask = async (taskId: number, completed: boolean) => {
-//   //   try {
-//   //     await axios.patch(
-//   //       `http://localhost:8000/api/tasks/${taskId}/`,
-//   //       { completed: !completed },
-//   //       { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-//   //     );
-//   //     fetchTasks();
-//   //   } catch (error) {
-//   //     console.error("Error updating task:", error);
-//   //   }
-//   // };
-
-//   const handleToggleTask = async (taskId: number, completed: boolean) => {
-//     try {
-//       // Note: Your current todoApiSlice doesn’t have an update endpoint.
-//       // This is a placeholder; you’d need to add an updateTask mutation.
-//       console.log(`Toggle task ${taskId} to ${!completed}`);
-//       refetch(); // Refetch after toggling (if update endpoint added)
-//     } catch (error) {
-//       console.error("Error updating task:", error);
-//     }
-//   };
-
-
-
-//   // const handleDeleteTask = async (taskId: number) => {
-//   //   try {
-//   //     await axios.delete(`http://localhost:8000/api/tasks/${taskId}/`, {
-//   //       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-//   //     });
-//   //     fetchTasks();
-//   //   } catch (error) {
-//   //     console.error("Error deleting task:", error);
-//   //   }
-//   // };
-//   const handleDeleteTask = async (taskId: number) => {
-//     try {
-//       await deleteTask(taskId).unwrap();
-//       refetch(); // Refetch tasks after deleting
-//     } catch (error) {
-//       console.error("Error deleting task:", error);
-//     }
-//   };
-
-
-
-//   return (
-//     <div className="min-h-screen bg-gray-50 p-6">
-//       <div className="max-w-4xl mx-auto space-y-6">
-//         <h1 className="text-3xl font-bold text-gray-800">To-Do List</h1>
-
-//         {/* Create Task Form */}
-//         <Card className="bg-white shadow-sm">
-//           <CardContent className="pt-6">
-//             <div className="grid gap-4">
-//               <Input
-//                 placeholder="Task title"
-//                 value={newTask.title}
-//                 onChange={(e) =>
-//                   setNewTask({ ...newTask, title: e.target.value })
-//                 }
-//               />
-              
-//               <Input
-//                 placeholder="Description"
-//                 value={newTask.description}
-//                 onChange={(e) =>
-//                   setNewTask({ ...newTask, description: e.target.value })
-//                 }
-//               />
-//               <Input
-//                 // type="datetime-local"
-//                 type="date"
-//                 value={newTask.due_date}
-//                 onChange={(e) =>
-//                   setNewTask({ ...newTask, due_date: e.target.value })
-//                 }
-//               />
-            
-
-//               <Button onClick={handleCreateTask} className="w-full">
-//                 Add Task
-//               </Button>
-
-              
-//             </div>
-//           </CardContent>
-//         </Card>
-
-//         {/* Task List */}
-//         <Card className="bg-white shadow-sm">
-//           <CardHeader>
-//             <CardTitle>Your Tasks</CardTitle>
-//           </CardHeader>
-//           <CardContent>
-//             {isLoading ? (
-//               <p>Loading...</p>
-//             ) : Array.isArray(tasks) && tasks.length === 0 ? (
-//               <p className="text-gray-500">No tasks yet.</p>
-//             ) : (
-//               <ul className="space-y-4">
-//                 {Array.isArray(tasks) && tasks.map((task) => (
-//                   <li
-//                     key={task.id}
-//                     className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
-//                   >
-//                     <div className="flex items-center space-x-3">
-//                       <Checkbox
-//                         checked={task.completed}
-//                         onCheckedChange={() =>
-//                           handleToggleTask(task.id, task.completed)
-//                         }
-//                       />
-//                       <div>
-//                         <p
-//                           className={
-//                             task.completed
-//                               ? "line-through text-gray-500"
-//                               : "text-gray-800"
-//                           }
-//                         >
-//                           {task.title}
-//                         </p>
-//                         <p className="text-sm text-gray-600">
-//                           Due: {task.due_date ? format(new Date(task.due_date), "PPP") : "No due date"}
-//                         </p>
-//                       </div>
-//                     </div>
-//                     <Button
-//                       variant="destructive"
-//                       size="sm"
-//                       onClick={() => handleDeleteTask(task.id)}
-//                     >
-//                       Delete
-//                     </Button>
-//                   </li>
-//                 ))}
-//               </ul>
-//             )}
-//           </CardContent>
-//         </Card>
-       
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -237,26 +6,28 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
-import { Task, NewTask } from "@/app/types/types";
 import {
   useCreateTaskMutation,
   useRetrieveTasktodayQuery,
   useDeleteTaskMutation,
   useUpdateTaskMutation,
 } from "@/redux/features/todoApiSlice";
+import { cn } from "@/lib/utils";
+import { Trash2, Plus } from "lucide-react";
+import Loading from "@/loading/Loading";
 
 export default function TodoPage() {
-  const [newTask, setNewTask] = useState<NewTask>({
+  const [newTask, setNewTask] = useState({
     title: "",
     description: "",
     due_date: "",
   });
 
   const { data, isLoading, refetch } = useRetrieveTasktodayQuery();
-  const tasks = data?.data || []; // Extract the 'data' array, default to empty array
+  const tasks = data?.data || [];
   const [createTask] = useCreateTaskMutation();
   const [deleteTask] = useDeleteTaskMutation();
-  const [updateTask] = useUpdateTaskMutation(); // Add this
+  const [updateTask] = useUpdateTaskMutation();
 
   useEffect(() => {
     refetch();
@@ -266,7 +37,7 @@ export default function TodoPage() {
     try {
       const formattedTask = {
         ...newTask,
-        due_date: newTask.due_date ? newTask.due_date : undefined,
+        due_date: newTask.due_date || undefined,
       };
       await createTask(formattedTask).unwrap();
       setNewTask({ title: "", description: "", due_date: "" });
@@ -276,20 +47,10 @@ export default function TodoPage() {
     }
   };
 
-  // const handleToggleTask = async (taskId: number, completed: boolean) => {
-  //   try {
-  //     console.log(`Toggle task ${taskId} to ${!completed}`);
-  //     refetch();
-  //   } catch (error) {
-  //     console.error("Error updating task:", error);
-  //   }
-  // };
-  
   const handleToggleTask = async (taskId: number, completed: boolean) => {
     try {
-      console.log(`Toggle task ${taskId} to ${!completed}`);
-      await updateTask({ id: taskId, completed: !completed }).unwrap(); // Update the task
-      refetch(); // Fetch updated tasks
+      await updateTask({ id: taskId, completed: !completed }).unwrap();
+      refetch();
     } catch (error) {
       console.error("Error updating task:", error);
     }
@@ -305,27 +66,70 @@ export default function TodoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div
+      className={cn(
+        "min-h-screen p-4 sm:p-6 lg:p-8",
+        "transition-colors duration-300"
+      )}
+    >
       <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-gray-800">To-Do List</h1>
+        <h1
+          className={cn(
+            "text-2xl sm:text-3xl font-bold",
+            "text-gray-900 dark:text-gray-100",
+            "truncate" // Truncate long titles in the header
+          )}
+        >
+          To-Do List
+        </h1>
 
         {/* Create Task Form */}
-        <Card className="bg-white shadow-sm">
-          <CardContent className="pt-6">
+        <Card
+          className={cn(
+            "shadow-md hover:shadow-lg transition-shadow duration-300",
+            "bg-white dark:bg-gray-800",
+            "border border-gray-200 dark:border-gray-700"
+          )}
+        >
+          <CardContent className="p-4 sm:p-6">
             <div className="grid gap-4">
               <Input
-                placeholder="Task title"
+                spellCheck="true"
+                placeholder="Task title (max 100 chars)"
                 value={newTask.title}
                 onChange={(e) =>
-                  setNewTask({ ...newTask, title: e.target.value })
+                  setNewTask({
+                    ...newTask,
+                    title: e.target.value.slice(0, 100), // Limit input length
+                  })
                 }
+                className={cn(
+                  "bg-gray-50 dark:bg-gray-700",
+                  "text-gray-900 dark:text-gray-100",
+                  "border-gray-300 dark:border-gray-600",
+                  "focus:ring-2 focus:ring-primary/50",
+                  "h-10 sm:h-11",
+                  "truncate" // Truncate long text in input field
+                )}
               />
               <Input
-                placeholder="Description"
+                placeholder="Description (max 500 chars)"
+                spellCheck="true"
                 value={newTask.description}
                 onChange={(e) =>
-                  setNewTask({ ...newTask, description: e.target.value })
+                  setNewTask({
+                    ...newTask,
+                    description: e.target.value.slice(0, 500), // Limit input length
+                  })
                 }
+                className={cn(
+                  "bg-gray-50 dark:bg-gray-700",
+                  "text-gray-900 dark:text-gray-100",
+                  "border-gray-300 dark:border-gray-600",
+                  "focus:ring-2 focus:ring-primary/50",
+                  "h-10 sm:h-11",
+                  "truncate"
+                )}
               />
               <Input
                 type="date"
@@ -333,8 +137,25 @@ export default function TodoPage() {
                 onChange={(e) =>
                   setNewTask({ ...newTask, due_date: e.target.value })
                 }
+                className={cn(
+                  "bg-gray-50 dark:bg-gray-700",
+                  "text-gray-900 dark:text-gray-100",
+                  "border-gray-300 dark:border-gray-600",
+                  "focus:ring-2 focus:ring-primary/50",
+                  "h-10 sm:h-11"
+                )}
               />
-              <Button onClick={handleCreateTask} className="w-full">
+              <Button
+                onClick={handleCreateTask}
+                className={cn(
+                  "w-full h-10 sm:h-11",
+                  "bg-primary hover:bg-primary/90",
+                  "text-white",
+                  "transition-colors duration-200",
+                  "dark:bg-amber-900 rounded-4xl"
+                )}
+              >
+                <Plus className="h-12 w-12" />
                 Add Task
               </Button>
             </div>
@@ -342,40 +163,81 @@ export default function TodoPage() {
         </Card>
 
         {/* Task List */}
-        <Card className="bg-white shadow-sm">
-          <CardHeader>
-            <CardTitle>Your Tasks</CardTitle>
+        <Card
+          className={cn(
+            "shadow-md hover:shadow-lg transition-shadow duration-300",
+            "bg-white dark:bg-gray-800",
+            "border border-gray-200 dark:border-gray-700"
+          )}
+        >
+          <CardHeader className="border-b border-gray-200 dark:border-gray-700">
+            <CardTitle
+              className={cn(
+                "text-lg sm:text-xl font-semibold",
+                "text-gray-900 dark:text-gray-100"
+              )}
+            >
+              Your Tasks
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             {isLoading ? (
-              <p>Loading...</p>
+              <Loading />
             ) : tasks.length === 0 ? (
-              <p className="text-gray-500">No tasks yet.</p>
+              <p className="text-gray-500 dark:text-gray-400">No tasks yet.</p>
             ) : (
               <ul className="space-y-4">
                 {tasks.map((task) => (
                   <li
                     key={task.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-md"
+                    className={cn(
+                      "flex flex-col sm:flex-row sm:items-start justify-between p-4",
+                      "bg-gray-50 dark:bg-gray-700",
+                      "rounded-lg",
+                      "border border-gray-200 dark:border-gray-600",
+                      "transition-colors duration-200"
+                    )}
                   >
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-start space-x-3 w-full sm:w-3/4">
                       <Checkbox
                         checked={task.completed}
                         onCheckedChange={() =>
                           handleToggleTask(task.id!, task.completed)
                         }
+                        className="mt-1 flex-shrink-0"
                       />
-                      <div>
+                      <div className="flex-1 min-w-0 space-y-1">
                         <p
-                          className={
+                          className={cn(
+                            "text-base font-medium",
                             task.completed
-                              ? "line-through text-gray-500"
-                              : "text-gray-800"
-                          }
+                              ? "line-through text-gray-500 dark:text-gray-400"
+                              : "text-gray-900 dark:text-gray-100",
+                            "break-words line-clamp-2" // Limit to 2 lines with ellipsis
+                          )}
                         >
                           {task.title}
                         </p>
-                        <p className="text-sm text-gray-600">
+                        {task.description && (
+                          <p
+                            className={cn(
+                              "text-sm",
+                              task.completed
+                                ? "line-through text-gray-400 dark:text-gray-500"
+                                : "text-gray-700 dark:text-gray-300",
+                              "break-words line-clamp-3" // Limit to 3 lines with ellipsis
+                            )}
+                          >
+                            {task.description}
+                          </p>
+                        )}
+                        <p
+                          className={cn(
+                            "text-sm",
+                            "text-gray-600 dark:text-gray-400",
+                            "break-words"
+                          )}
+                        >
                           Due:{" "}
                           {task.due_date
                             ? format(new Date(task.due_date), "PPP")
@@ -387,8 +249,16 @@ export default function TodoPage() {
                       variant="destructive"
                       size="sm"
                       onClick={() => handleDeleteTask(task.id!)}
+                      className={cn(
+                        "mt-2 sm:mt-0 sm:ml-4",
+                        "h-9 flex-shrink-0",
+                        "bg-none hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800",
+                        "text-white",
+                        "transition-colors duration-200",
+                        "text-center items-center justify-center rounded-full"
+                      )}
                     >
-                      Delete
+                      <Trash2 className="h-12 w-12" />
                     </Button>
                   </li>
                 ))}

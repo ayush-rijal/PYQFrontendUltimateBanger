@@ -55,7 +55,7 @@ export default async function ProfilePage() {
       </Head>
 
       {/* 🌟 Profile Page Layout */}
-      <div className="container max-w-5xl py-8 mx-auto px-4 relative">
+      <div className="container max-w-5xl py-8 mx-auto px-4 relative ">
         <ProfileHeader />
 
         {/* 🔒 Wrapper for Lock Effect */}
@@ -63,7 +63,7 @@ export default async function ProfilePage() {
           {/* Profile Tabs - Apply Blur & Opacity if Locked */}
           <div
             className={`${
-              !isPublished ? "opacity-30 blur-md pointer-events-none" : ""
+              !isPublished ? "opacity-30 blur-md pointer-events-none " : ""
             } transition-all duration-300`}
           >
             <ProfileTabs user={user} />
@@ -71,7 +71,7 @@ export default async function ProfilePage() {
 
           {/* 🔒 Lock Overlay - Shows When Page is Locked */}
           {!isPublished && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-md rounded-lg transition-all hover:bg-white/40">
+            <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-md rounded-lg transition-all hover:bg-white/40 border-amber-900 border-1 ">
               <div className="flex flex-col items-center text-gray-700">
                 <Lock className="w-14 h-14 mb-2 text-gray-600 transition-all" />
                 <p className="text-lg font-semibold">Profile Page is Locked</p>

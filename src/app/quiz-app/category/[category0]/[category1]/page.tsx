@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ExclamationTriangleIcon, ReloadIcon } from "lucide-react";
+import { ExclamationTriangleIcon, ReloadIcon, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
 
 interface QuizCardProps {
   title: string;
@@ -13,10 +15,10 @@ interface QuizCardProps {
   className: string;
 }
 
-const QuizCard = ({ title, created_at, url }: QuizCardProps) => (
+const QuizCard = ({ title, created_at, url, className }: QuizCardProps) => (
   <Link
     href={url}
-    className="group block transition-transform hover:scale-[1.02] focus:scale-[1.02]"
+    className={`group block transition-transform hover:scale-[1.02] focus:scale-[1.02] ${className}`}
     aria-label={`Open ${title} quiz`}
   >
     <div className="p-6 bg-card rounded-lg shadow-sm hover:shadow-md transition-all duration-200 ease-in-out border border-border">
@@ -34,10 +36,12 @@ const QuizCard = ({ title, created_at, url }: QuizCardProps) => (
 );
 
 export default function QuizFilesPage() {
+  const [searchTerm, setSearchTerm] = useState("");
   const { category0, category1 } = useParams() as {
     category0: string;
     category1: string;
   };
+
   const {
     data: quizFiles,
     isLoading,
@@ -71,8 +75,14 @@ export default function QuizFilesPage() {
     );
   }
 
+  // Filter quiz files based on search term
+  const filteredQuizFiles =
+    quizFiles?.filter((quiz) =>
+      quiz.title.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || [];
+
   return (
-    <div className="container mt-2 ">
+    <div className="container mt-2">
       <header className="mb-8 text-2xl text-center">
         <h1 className="text-3xl font-semibold tracking-tight text-primary">
           {category1.replace(/-/g, " ")} Quizzes
@@ -82,18 +92,29 @@ export default function QuizFilesPage() {
         </p>
       </header>
 
+      <div className="relative max-w-lg mx-auto mb-12">
+        <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+        <Input
+          type="text"
+          placeholder="Search quizzes..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 pr-4 py-2.5 w-full rounded-full border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all duration-200"
+        />
+      </div>
+
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {[...Array(3)].map((_, index) => (
             <Skeleton key={index} className="h-32 rounded-lg" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4  ">
-          {quizFiles?.length ? (
-            quizFiles.map((quiz) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
+          {filteredQuizFiles.length > 0 ? (
+            filteredQuizFiles.map((quiz) => (
               <QuizCard
-                className=" border border-r-4 border-amber-500 hover:bg-amber-900 "
+                className="border border-r-4 rounded-full border-amber-900 hover:bg-amber-900"
                 key={quiz.title}
                 title={quiz.title}
                 created_at={quiz.created_at}
@@ -103,7 +124,9 @@ export default function QuizFilesPage() {
           ) : (
             <div className="col-span-full text-center py-12">
               <p className="text-muted-foreground">
-                No quizzes available in this category
+                {searchTerm
+                  ? "No quizzes match your search"
+                  : "No quizzes available in this category"}
               </p>
             </div>
           )}

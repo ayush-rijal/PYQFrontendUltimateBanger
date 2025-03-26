@@ -138,7 +138,7 @@ export function AppSidebar() {
     <Sidebar
       variant="floating"
       collapsible="icon"
-      className="bg-white dark:bg-gray-900"
+      className="bg-white dark:bg-black"
     >
       <SidebarContent>
         <ScrollArea className="h-full py-4">
@@ -169,10 +169,10 @@ export function AppSidebar() {
                         {item.isLocked ? (
                           <div className="flex items-center gap-3 w-full">
                             <item.icon className="h-5 w-5 flex-shrink-0" />
-                            <span className="truncate hidden md:group-hover:block">
+                            <span className="truncate  md:group-hover:block">
                               {item.title}
                             </span>
-                            <Lock className="h-4 w-4 ml-auto hidden md:group-hover:block" />
+                            <Lock className="h-4 w-4 ml-auto  md:group-hover:block" />
                           </div>
                         ) : (
                           <a
@@ -180,7 +180,7 @@ export function AppSidebar() {
                             className="flex items-center gap-3 w-full"
                           >
                             <item.icon className="h-5 w-5 flex-shrink-0" />
-                            <span className="truncate hidden md:group-hover:block ">
+                            <span className="truncate  md:group-hover:block ">
                               {item.title}
                             </span>
                           </a>

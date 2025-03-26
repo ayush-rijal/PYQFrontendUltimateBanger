@@ -1,23 +1,35 @@
-"use client"; // Required for SidebarProvider
+"use client";
 
-
-import CustomProvider from "@/redux/provider";
-import { RequireAuth } from "@/components/utils";
-import { SidebarProvider} from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/dashboard/components/app-sidebar";
+import { RequireAuth } from "@/components/utils";
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function TodoLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <RequireAuth>
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <main className="flex-1 w-full gap-3 mt-3 mr-3">
-          
-          <CustomProvider>{children}</CustomProvider>
-        </main>
-      </div>
-    </SidebarProvider>
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full flex-col md:flex-row">
+          {/* Sidebar - Hidden by default on small screens */}
+          <AppSidebar />
+
+          {/* Mobile Header with Toggle Button */}
+          <header className="md:hidden flex items-center justify-between p-4  rounded-4xl bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <h1 className="text-lg font-semibold text-amber-900 dark:text-white cursor-pointer">
+              Expore Sidebar
+            </h1>
+            <SidebarTrigger className="text-amber-700 dark:text-gray-300" />
+          </header>
+
+          {/* Main Content */}
+          <main className="flex-3 w-full p-4 md:p-6 lg:p-8 overflow-auto">
+            {children}
+          </main>
+        </div>
+      </SidebarProvider>
     </RequireAuth>
   );
 }

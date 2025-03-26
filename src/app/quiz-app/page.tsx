@@ -1,39 +1,13 @@
-// 'use client';
-// import { useGetCategory0Query } from '@/redux/features/quizApiSlice';
-// import Link from 'next/link';
-
-// export default function Home() {
-//   const { data: categories, isLoading, error } = useGetCategory0Query<YourErrorType>();
-
-//   if (isLoading) return <div>LoadingHI...</div>;
-//   if (error) return <div>Error: {error.message}</div>;
-
-//   return (
-//     <div className="container mx-auto p-4">
-//       <h1 className="text-3xl font-bold mb-6">Select a Category</h1>
-//       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-//         {categories?.map((cat) => (
-//           <Link key={cat.name} href={`/quiz-app/category/${cat.name}`}>
-//             <div className="p-4 bg-gray-100 rounded-lg hover:bg-gray-200">
-//               <h2 className="text-xl font-semibold">{cat.name}</h2>
-//             </div>
-//           </Link>
-//         ))}
-//       </div>
-//     </div>
-//   );
-// }
-
-'use client';
-import { useGetCategory0Query } from '@/redux/features/quizApiSlice';
-import Link from 'next/link';
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+"use client";
+import { useGetCategory0Query } from "@/redux/features/quizApiSlice";
+import Link from "next/link";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 // import { Badge } from "@/components/ui/badge";
-import { Search, BookOpen, Clock, PlayCircle,  } from "lucide-react";
+import { Search, BookOpen, Clock, PlayCircle } from "lucide-react";
 import Loading from "@/loading/Loading";
 
 // Define props interface for category card
@@ -48,17 +22,17 @@ export default function Home() {
 
   // Variant styles for light and dark modes
   const variantStyles = {
-    purple: "bg-purple-100 dark:bg-purple-900/50 border-purple-200 dark:border-purple-800",
-    beige: "bg-amber-100 dark:bg-amber-900/50 border-amber-200 dark:border-amber-800",
-    green: "bg-green-100 dark:bg-green-900/50 border-green-200 dark:border-green-800",
+    purple:
+      "bg-purple-100 dark:bg-purple-900/50 border-purple-200 dark:border-purple-800",
+    beige:
+      "bg-amber-100 dark:bg-amber-900/50 border-amber-200 dark:border-amber-800",
+    green:
+      "bg-green-100 dark:bg-green-900/50 border-green-200 dark:border-green-800",
   };
 
   const CategoryCard = ({ title, variant }: CategoryCardProps) => (
     <Link href={`/quiz-app/category/${title}`}>
-      <motion.div
-        whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.97 }}
-      >
+      <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
         <Card
           className={`h-full flex flex-col bg-white dark:bg-gray-800 border ${variantStyles[variant]} rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden`}
         >
@@ -84,9 +58,7 @@ export default function Home() {
               </div>
             </div>
             <motion.div className="mt-6" whileHover={{ scale: 1.03 }}>
-              <Button
-                className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-medium rounded-lg py-2.5 transition-colors duration-200 flex items-center justify-center"
-              >
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-medium rounded-lg py-2.5 transition-colors duration-200 flex items-center justify-center">
                 <PlayCircle className="w-5 h-5 mr-2 group-hover:scale-105 transition-transform" />
                 Explore Category
               </Button>
@@ -99,18 +71,23 @@ export default function Home() {
 
   if (isLoading) return <Loading />;
 
-  if (error) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-red-500 text-lg font-medium bg-red-50 dark:bg-red-900/20 px-6 py-3 rounded-lg">
-        Error: {error instanceof Error ? error.message : "An unknown error occurred"}
+  if (error)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500 text-lg font-medium bg-red-50 dark:bg-red-900/20 px-6 py-3 rounded-lg">
+          Error:{" "}
+          {error instanceof Error ? error.message : "An unknown error occurred"}
+        </div>
       </div>
-    </div>
-  );
+    );
 
   // Limit to maximum 3 categories and assign variants
   const displayedCategories = categories?.slice(0, 3).map((cat, index) => ({
     title: cat.name,
-    variant: ['purple', 'beige', 'green'][index] as 'purple' | 'beige' | 'green'
+    variant: ["purple", "beige", "green"][index] as
+      | "purple"
+      | "beige"
+      | "green",
   }));
 
   // Filter categories based on search term
@@ -136,6 +113,7 @@ export default function Home() {
           <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           <Input
             type="text"
+            spellCheck="true"
             placeholder="Search categories..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -157,10 +135,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.1 }}
             >
-              <CategoryCard
-                title={cat.title}
-                variant={cat.variant}
-              />
+              <CategoryCard title={cat.title} variant={cat.variant} />
             </motion.div>
           ))}
         </motion.div>

@@ -76,7 +76,7 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="container w-full">
+    <div className="p-0">
       <Card className="shadow-lg">
         <CardHeader className="bg-gradient-to-r py-[-6] from-blue-500 to-indigo-600 text-white rounded-t-lg ">
           <div className="flex items-center gap-3">
