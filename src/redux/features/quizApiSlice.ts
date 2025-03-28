@@ -429,15 +429,23 @@ export const quizApiSlice = qapiSlice.injectEndpoints({
         `/${category0}/${category1}/${quizFile}/${questionId}/choices/`,
     }),
 
-    // Fetch user quiz results
-    getUserQuizResults: builder.query<QuizResult[], { timeRange: string }>({
-      query: ({ timeRange }) => ({
-        url: "/results/",
-        params: { time_range: timeRange }, // Match Django's expected param
-      }),
-      // Optional: Add caching tags
-      providesTags: ["QuizResults"],
-    }),
+submitQuiz:builder.mutation({
+  query:({category0,category1,quizFile,choices,is_submitted=true})=>({
+  url:`${category0}/${category1}/${quizFile}/submit/`,
+  method:'POST',
+  body:{choices,is_submitted},
+  })
+}),
+
+  getQuizResult:builder.query({
+    query:({category0,category1,quizFile})=>`${category0}/${category1}/${quizFile}/result/`
+  }),
+
+  getLeaderboard:builder.query({
+    query:()=>'quiz-leaderboard/',
+  }),
+
+
   }),
 });
 
@@ -449,5 +457,7 @@ export const {
   useGetQuestionsQuery,
   useGetChoicesQuery,
   useGetAllQuestionsQuery,
-  useGetUserQuizResultsQuery,
+  useSubmitQuizMutation,
+  useGetQuizResultQuery,
+  useGetLeaderboardQuery,
 } = quizApiSlice;
