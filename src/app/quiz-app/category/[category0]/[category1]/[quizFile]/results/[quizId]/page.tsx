@@ -1,8 +1,9 @@
 "use client";
-
+import "@/loading/QuizResults.css";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
+  useGetQuizResultQuery,
   useGetAllQuestionsQuery,
   useGetChoicesQuery,
 } from "@/redux/features/quizApiSlice";
@@ -12,1197 +13,934 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, XCircle, ArrowLeft, Download, Send } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
+import {
+  Loader2,
+  CheckCircle,
+  XCircle,
+  ArrowLeft,
+  Share2,
+  AlertCircle,
+  HelpCircle,
+  List,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import Loading from "@/loading/Loading";
-import jsPDF from "jspdf";
-import * as React from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
-  ChartConfig,
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { toast } from "sonner";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
+import { json } from "stream/consumers";
 
 // Interfaces
 interface Question {
   id: number;
   text: string;
+  questions_file_title: string;
   subject_category_name: string;
   correct_choice_id?: number;
+  choices?: Choice[];
+  image_url?: string;
 }
 
 interface Choice {
   id: number;
   text: string;
   is_correct: boolean;
+  question: number | undefined;
 }
 
-interface ChartData {
-  subject: string;
-  correct: number;
-  incorrect: number;
+interface QuizResult {
+  questions_file: string;
+  points: number;
+  completed_at: string | null;
 }
 
-// Chart Config
-const chartConfig = {
-  performance: {
-    label: "Performance",
-  },
-  correct: {
-    label: "Correct Answers",
-    color: "#10B981",
-  },
-  incorrect: {
-    label: "Incorrect Answers",
-    color: "#EF4444",
-  },
-} satisfies ChartConfig;
-
-// ResultAnalysis Component
-function ResultAnalysis() {
-  const [viewMode, setViewMode] = React.useState("all");
+export default function QuizResultsPage() {
   const {
     category0,
     category1,
     quizFile: rawQuizFile,
-  } = useParams() as { category0: string; category1: string; quizFile: string };
+  } = useParams() as {
+    category0: string;
+    category1: string;
+    quizFile: string;
+  };
+  const router = useRouter();
   const quizFile = decodeURIComponent(rawQuizFile);
 
-  const [selectedChoices, setSelectedChoices] = React.useState<
-    Record<number, number>
-  >({});
-  React.useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const choicesParam = urlParams.get("choices");
-    console.log("URL Choices Param:", choicesParam); // Debug
-    if (choicesParam) {
-      setSelectedChoices(JSON.parse(decodeURIComponent(choicesParam)));
-    }
-  }, []);
-
-  const { data: allQuestions = [], isLoading } = useGetAllQuestionsQuery({
-    category0,
-    category1,
-    quizFile,
-  });
-
-  const chartData: ChartData[] = React.useMemo(() => {
-    console.log("allQuestions:", allQuestions); // Debug
-    console.log("selectedChoices:", selectedChoices); // Debug
-    if (!allQuestions.length || !Object.keys(selectedChoices).length) return [];
-
-    const subjectStats = allQuestions.reduce((acc, question) => {
-      const subject = question.subject_category_name;
-      if (!acc[subject]) {
-        acc[subject] = { correct: 0, incorrect: 0, total: 0 };
-      }
-      acc[subject].total += 1;
-      const selectedChoice = selectedChoices[question.id];
-      const isCorrect = question.correct_choice_id
-        ? selectedChoice === question.correct_choice_id
-        : false;
-      if (isCorrect) {
-        acc[subject].correct += 1;
-      } else if (selectedChoice) {
-        acc[subject].incorrect += 1;
-      }
-      return acc;
-    }, {} as Record<string, { correct: number; incorrect: number; total: number }>);
-
-    const result = Object.entries(subjectStats).map(([subject, stats]) => ({
-      subject,
-      correct: stats.correct,
-      incorrect: stats.incorrect,
-    }));
-    console.log("chartData:", result); // Debug
-    return result;
-  }, [allQuestions, selectedChoices]);
-
-  const filteredData = chartData.filter((item) =>
-    viewMode === "all" ? true : item.subject === viewMode
+  const [activeTab, setActiveTab] = useState<string>("all");
+  const [quizResults, setQuizResults] = useState<QuizResult | null>(null);
+  const [questions, setQuestions] = useState<Record<number, Question>>({});
+  const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(
+    null
   );
+  const [derivedResults, setDerivedResults] = useState<
+    {
+      question_id: number;
+      selected_choice_id: number | null;
+      is_correct: boolean;
+    }[]
+  >([]);
+  const [showAllQuestions, setShowAllQuestions] = useState<boolean>(false);
+
+  const {
+    data: resultsData,
+    isLoading: resultsLoading,
+    error: resultsError,
+  } = useGetQuizResultQuery({ category0, category1, quizFile });
+
+  const {
+    data: allQuestionsData = [],
+    isLoading: questionsLoading,
+    error: questionsError,
+  } = useGetAllQuestionsQuery({ category0, category1, quizFile });
+
+  const isLoading = resultsLoading || questionsLoading;
+  const hasError = resultsError || questionsError;
+
+  useEffect(() => {
+    if (!resultsData || !allQuestionsData) {
+      console.log("Data not ready:", { resultsData, allQuestionsData });
+      return;
+    }
+
+    try {
+      if (!Array.isArray(resultsData) && typeof resultsData !== "object") {
+        console.error("Invalid results data:", resultsData);
+        return;
+      }
+      console.log("Backend Response from getQuizResult:", resultsData);
+      const quizResult: QuizResult = Array.isArray(resultsData)
+        ? resultsData[0]
+        : resultsData;
+      if (!quizResult || typeof quizResult.points !== "number") {
+        console.error("Invalid quiz result data:", quizResult);
+      }
+      setQuizResults(quizResult);
+
+      const questionsMap = allQuestionsData.reduce((acc, question) => {
+        if (!question || typeof question.id !== "number" || !question.text) {
+          console.warn("Skipping invalid question:", question);
+          return acc;
+        }
+        acc[question.id] = question;
+        return acc;
+      }, {} as Record<number, Question>);
+      setQuestions(questionsMap);
+      console.warn(
+        "Simulating result based on points; actual sealrctions Unavailable."
+      );
+      const derived = allQuestionsData.map((q, index) => {
+        const isCorrect = index < quizResult.points;
+        return {
+          question_id: q.id,
+          selected_choice_id: isCorrect ? q.correct_choice_id || null : null,
+          is_correct: isCorrect,
+        };
+      });
+      setDerivedResults(derived);
+      console.log("Simulated Results:", derived);
+
+      if (derived.length > 0 && !showAllQuestions) {
+        setSelectedQuestionId(derived[0].question_id);
+      }
+    } catch (error) {
+      console.error("Error in useEffect:", error);
+    }
+  }, [resultsData, allQuestionsData, showAllQuestions]);
+
+  const formatPoints = (points: number) => `${points}`;
+
+  const handleShare = () => {
+    const shareUrl = window.location.href;
+    if (navigator.share) {
+      navigator
+        .share({
+          title: `Quiz Results: ${quizFile}`,
+          text: `I scored ${formatPoints(
+            quizResults?.points || 0
+          )} points on the ${quizFile} quiz!`,
+          url: shareUrl,
+        })
+        .catch((err) => console.error("Error sharing:", err));
+    } else {
+      navigator.clipboard
+        .writeText(shareUrl)
+        .then(() =>
+          toast.success("URL Copied! Share link has been copied to clipboard")
+        );
+    }
+  };
+
+  const filterQuestions = (tab: string) => {
+    switch (tab) {
+      case "all":
+        return derivedResults;
+      case "correct":
+        return derivedResults.filter((q) => q.is_correct);
+      case "incorrect":
+        return derivedResults.filter((q) => !q.is_correct);
+      default:
+        return [];
+    }
+  };
+
+  const handleQuestionClick = (questionId: number) => {
+    setSelectedQuestionId(questionId);
+    setShowAllQuestions(false);
+    setActiveTab("all");
+  };
+
+  const handleBackToAll = () => {
+    setShowAllQuestions(true);
+    setSelectedQuestionId(null);
+    setActiveTab("all");
+  };
+
+  const handleNextQuestion = () => {
+    if (!selectedQuestionId) return;
+    const currentIndex = derivedResults.findIndex(
+      (q) => q.question_id === selectedQuestionId
+    );
+    if (currentIndex < derivedResults.length - 1) {
+      setSelectedQuestionId(derivedResults[currentIndex + 1].question_id);
+    }
+  };
+
+  const handlePrevQuestion = () => {
+    if (!selectedQuestionId) return;
+    const currentIndex = derivedResults.findIndex(
+      (q) => q.question_id === selectedQuestionId
+    );
+    if (currentIndex > 0) {
+      setSelectedQuestionId(derivedResults[currentIndex - 1].question_id);
+    }
+  };
+
+  const groupQuestionsBySubject = () => {
+    const grouped: Record<string, Question[]> = {};
+    derivedResults.forEach((result) => {
+      const question = questions[result.question_id];
+      if (!question) return;
+      const subject = question.subject_category_name;
+      if (!grouped[subject]) {
+        grouped[subject] = [];
+      }
+      grouped[subject].push(question);
+    });
+    return grouped;
+  };
 
   if (isLoading) {
-    return;
-    <Loading />;
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gradient-to-b from-background to-muted/20">
+        <div className="flex flex-col items-center gap-4">
+          <Loading />
+          <p className="text-muted-foreground">Loading your quiz results...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (!chartData.length) {
-    return <div>No quiz data available to display.</div>;
+  if (hasError) {
+    return (
+      <div className="container mx-auto p-8 text-center">
+        <div className="max-w-md mx-auto bg-card rounded-lg shadow-lg p-8 border">
+          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-destructive" />
+          <h2 className="text-2xl font-bold mb-2">Error Loading Results</h2>
+          <p className="mb-6 text-muted-foreground">
+            We couldn&apos;t load your quiz results. Please try again later.
+          </p>
+          <Button
+            onClick={() =>
+              router.push(`/quiz-app/category/${category0}/${category1}`)
+            }
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Return to Quizzes
+          </Button>
+        </div>
+      </div>
+    );
   }
 
-  const subjects = Array.from(new Set(chartData.map((item) => item.subject)));
+  if (!quizResults || !Object.keys(questions).length) {
+    return (
+      <div className="container mx-auto p-8 text-center">
+        <div className="max-w-md mx-auto bg-card rounded-lg shadow-lg p-8 border">
+          <HelpCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+          <h2 className="text-2xl font-bold mb-2">No Results Found</h2>
+          <p className="mb-6 text-muted-foreground">
+            We couldn&apos;t find any results or questions for this quiz.
+          </p>
+          <Button
+            onClick={() =>
+              router.push(`/quiz-app/category/${category0}/${category1}`)
+            }
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Return to Quizzes
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const totalQuestions = derivedResults.length;
+  const correctCount = derivedResults.filter((q) => q.is_correct).length;
+  const incorrectCount = totalQuestions - correctCount;
+  const scorePercentage = Math.round((correctCount / totalQuestions) * 100);
+  const groupedQuestions = groupQuestionsBySubject();
+
+  const renderQuestionList = () => (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-medium flex items-center">
+          <List className="mr-2 h-5 w-5 text-primary" />
+          Question List
+        </h3>
+        {selectedQuestionId && !showAllQuestions && (
+          <Button variant="outline" size="sm" onClick={handleBackToAll}>
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            All Questions
+          </Button>
+        )}
+      </div>
+      <ScrollArea className="h-[60vh]">
+        {Object.entries(groupedQuestions).map(([subject, qs]) => (
+          <div key={subject} className="mb-6">
+            <h4 className="mb-2 font-medium flex items-center">
+              <span className="w-2 h-2 rounded-full bg-primary mr-2"></span>
+              {subject}{" "}
+              <span className="text-muted-foreground ml-1">({qs.length})</span>
+            </h4>
+            <div className="grid grid-cols-4 gap-2">
+              {qs.map((q) => {
+                const result = derivedResults.find(
+                  (r) => r.question_id === q.id
+                );
+                const isSelected = q.id === selectedQuestionId;
+                const isAnswered = result && result.selected_choice_id !== null;
+                return (
+                  <Button
+                    key={q.id}
+                    variant={
+                      isSelected
+                        ? "default"
+                        : isAnswered
+                        ? "outline"
+                        : "secondary"
+                    }
+                    size="sm"
+                    className={cn(
+                      "h-10 w-10 p-0 rounded-full",
+                      isSelected && "shadow-md",
+                      result?.is_correct && "border-green-500",
+                      result?.selected_choice_id &&
+                        !result.is_correct &&
+                        "border-red-500"
+                    )}
+                    onClick={() => handleQuestionClick(q.id)}
+                  >
+                    {allQuestionsData.indexOf(q) + 1}
+                    {result?.is_correct ? (
+                      <CheckCircle className="ml-1 h-3 w-3 text-green-500" />
+                    ) : result?.selected_choice_id ? (
+                      <XCircle className="ml-1 h-3 w-3 text-red-500" />
+                    ) : null}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </ScrollArea>
+    </div>
+  );
 
   return (
-    <Card className="mb-6">
-      <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
-        <div className="grid flex-1 gap-1 text-center sm:text-left">
-          <CardTitle>Quiz Performance Analysis</CardTitle>
-          <CardDescription>
-            Showing your performance by subject category
-          </CardDescription>
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 pb-12">
+      <div className="container mx-auto px-4 py-8 lg:px-8">
+        {/* Header */}
+        <header className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mb-2 -ml-2 text-muted-foreground"
+                onClick={() => router.back()}
+              >
+                <ArrowLeft className="mr-1 h-4 w-4" />
+                Back to quizzes
+              </Button>
+              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+                Quiz Results
+              </h1>
+              <div className="flex items-center mt-1 text-muted-foreground">
+                <span className="text-sm">{category0}</span>
+                <span className="mx-2">›</span>
+                <span className="text-sm">{category1}</span>
+                <span className="mx-2">›</span>
+                <span className="text-sm font-medium">{quizFile}</span>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2 md:mt-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="group"
+              >
+                <Share2 className="mr-1 h-4 w-4 group-hover:text-primary transition-colors" />
+                Share Results
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        {/* Summary Card */}
+        <Card className="mb-8 overflow-hidden border shadow-md">
+          <CardHeader className="bg-muted/30 pb-2">
+            <CardTitle className="text-lg">Quiz Performance</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-6 p-6 md:grid-cols-2 lg:grid-cols-4">
+            {/* Enhanced Overall Score Section */}
+            <div className="flex flex-col items-center justify-center space-y-3">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="relative flex h-28 w-28 items-center justify-center">
+                      <svg className="h-full w-full absolute -rotate-90">
+                        <circle
+                          cx="56"
+                          cy="56"
+                          r="50"
+                          strokeWidth="8"
+                          fill="transparent"
+                          className="text-muted/20 dark:text-gray-700"
+                        />
+                      </svg>
+                      <svg className="h-full w-full absolute -rotate-90">
+                        <defs>
+                          <linearGradient
+                            id="progressGradient"
+                            x1="0%"
+                            y1="0%"
+                            x2="100%"
+                            y2="100%"
+                          >
+                            <stop
+                              offset="0%"
+                              className="stop-color-1"
+                              stopColor="#3b82f6"
+                            />
+                            <stop
+                              offset="100%"
+                              className="stop-color-2"
+                              stopColor="#10b981"
+                            />
+                          </linearGradient>
+                        </defs>
+                        <circle
+                          cx="56"
+                          cy="56"
+                          r="50"
+                          stroke="url(#progressGradient)"
+                          strokeWidth="8"
+                          fill="transparent"
+                          strokeDasharray={50 * 2 * Math.PI}
+                          strokeDashoffset={
+                            50 * 2 * Math.PI * (1 - scorePercentage / 100)
+                          }
+                          className="transition-all duration-1000 ease-out"
+                          style={{
+                            filter:
+                              "drop-shadow(0 0 4px rgba(59, 130, 246, 0.5))",
+                          }}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-3xl font-bold text-primary dark:text-blue-300">
+                          
+                          {scorePercentage}%
+                        </span>
+                      </div>
+                      <div className="absolute inset-0 rounded-full bg-primary/10 dark:bg-blue-500/10 animate-pulse" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="dark:bg-gray-800 dark:text-gray-200">
+                    <p>Your overall quiz performance</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <span className="text-sm font-medium text-muted-foreground dark:text-gray-400">
+                Overall Score
+              </span>
+            </div>
+
+            {/* Other Metrics */}
+            <div className="flex flex-col items-center justify-center space-y-2">
+              <div className="text-5xl font-bold text-primary">
+                {formatPoints(quizResults.points)}
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">
+                Total Points
+              </span>
+            </div>
+            <div className="flex flex-col items-center justify-center space-y-2">
+              <div className="flex items-center">
+                <CheckCircle className="mr-2 h-6 w-6 text-green-500" />
+                <span className="text-3xl font-semibold">
+                  {correctCount}/{totalQuestions}
+                </span>
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">
+                Correct Answers
+              </span>
+              <Progress
+                value={(correctCount / totalQuestions) * 100}
+                className="h-2 w-full max-w-[120px]"
+              />
+            </div>
+            <div className="flex flex-col items-center justify-center space-y-2">
+              <div className="flex items-center">
+                <XCircle className="mr-2 h-6 w-6 text-red-500" />
+                <span className="text-3xl font-semibold">
+                  {incorrectCount}/{totalQuestions}
+                </span>
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">
+                Incorrect Answers
+              </span>
+              <Progress
+                value={(incorrectCount / totalQuestions) * 100}
+                className="h-2 w-full max-w-[120px] bg-muted"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Main Content with Tabs */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex-1">
+            <Tabs
+              defaultValue="all"
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="bg-background rounded-lg shadow-sm border p-1"
+            >
+              <TabsList className="mb-4 w-full grid grid-cols-3 bg-muted/50">
+                <TabsTrigger value="all" className="flex-1">
+                  All Questions
+                </TabsTrigger>
+                <TabsTrigger value="correct" className="flex-1">
+                  <CheckCircle className="mr-1 h-4 w-4 text-green-500" />
+                  Correct
+                </TabsTrigger>
+                <TabsTrigger value="incorrect" className="flex-1">
+                  <XCircle className="mr-1 h-4 w-4 text-red-500" />
+                  Incorrect
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="px-4 pb-4">
+                <TabsContent value="all" className="mt-0">
+                  {showAllQuestions ? (
+                    <div className="space-y-6">
+                      {filterQuestions("all").map((result) => (
+                        <QuestionDetail
+                          key={result.question_id}
+                          category0={category0}
+                          category1={category1}
+                          quizFile={quizFile}
+                          questionId={result.question_id}
+                          result={result}
+                          question={questions[result.question_id]}
+                        />
+                      ))}
+                    </div>
+                  ) : selectedQuestionId ? (
+                    <>
+                      <QuestionDetail
+                        category0={category0}
+                        category1={category1}
+                        quizFile={quizFile}
+                        questionId={selectedQuestionId}
+                        result={derivedResults.find(
+                          (q) => q.question_id === selectedQuestionId
+                        )}
+                        question={questions[selectedQuestionId]}
+                      />
+                      <div className="flex justify-between mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handlePrevQuestion}
+                          disabled={
+                            derivedResults.findIndex(
+                              (q) => q.question_id === selectedQuestionId
+                            ) === 0
+                          }
+                        >
+                          <ChevronLeft className="mr-1 h-4 w-4" />
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleNextQuestion}
+                          disabled={
+                            derivedResults.findIndex(
+                              (q) => q.question_id === selectedQuestionId
+                            ) ===
+                            derivedResults.length - 1
+                          }
+                        >
+                          Next
+                          <ChevronRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </div>
+                    </>
+                  ) : null}
+                </TabsContent>
+
+                <TabsContent value="correct" className="mt-0">
+                  {selectedQuestionId &&
+                    filterQuestions("correct").some(
+                      (q) => q.question_id === selectedQuestionId
+                    ) && (
+                      <QuestionDetail
+                        category0={category0}
+                        category1={category1}
+                        quizFile={quizFile}
+                        questionId={selectedQuestionId}
+                        result={derivedResults.find(
+                          (q) => q.question_id === selectedQuestionId
+                        )}
+                        question={questions[selectedQuestionId]}
+                      />
+                    )}
+                </TabsContent>
+
+                <TabsContent value="incorrect" className="mt-0">
+                  {selectedQuestionId &&
+                    filterQuestions("incorrect").some(
+                      (q) => q.question_id === selectedQuestionId
+                    ) && (
+                      <QuestionDetail
+                        category0={category0}
+                        category1={category1}
+                        quizFile={quizFile}
+                        questionId={selectedQuestionId}
+                        result={derivedResults.find(
+                          (q) => q.question_id === selectedQuestionId
+                        )}
+                        question={questions[selectedQuestionId]}
+                      />
+                    )}
+                </TabsContent>
+              </div>
+            </Tabs>
+
+            {/* Mobile Question List */}
+            <Card className="mt-6 lg:hidden">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <List className="mr-2 h-5 w-5 text-primary" />
+                  Question Navigator
+                </CardTitle>
+              </CardHeader>
+              <CardContent>{renderQuestionList()}</CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar for Larger Screens */}
+          <div className="hidden lg:block lg:w-1/3">
+            <Card className="sticky top-4 shadow-md border">
+              <CardHeader className="bg-muted/30 pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <List className="mr-2 h-5 w-5 text-primary" />
+                  Question Navigator
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[60vh] pr-4">
+                  {Object.entries(groupedQuestions).map(([subject, qs]) => (
+                    <div key={subject} className="mb-6">
+                      <h4 className="mb-3 font-medium flex items-center">
+                        <span className="w-2 h-2 rounded-full bg-primary mr-2"></span>
+                        {subject}{" "}
+                        <span className="text-muted-foreground ml-1">
+                          ({qs.length})
+                        </span>
+                      </h4>
+                      <div className="grid grid-cols-4 gap-2">
+                        {qs.map((q) => {
+                          const result = derivedResults.find(
+                            (r) => r.question_id === q.id
+                          );
+                          const isSelected = q.id === selectedQuestionId;
+                          const isAnswered =
+                            result && result.selected_choice_id !== null;
+                          return (
+                            <TooltipProvider key={q.id}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant={
+                                      isSelected
+                                        ? "default"
+                                        : isAnswered
+                                        ? "outline"
+                                        : "secondary"
+                                    }
+                                    size="sm"
+                                    className={cn(
+                                      "h-10 w-10 p-0 rounded-full transition-all",
+                                      isSelected &&
+                                        "shadow-md ring-2 ring-primary/20",
+                                      result?.is_correct && "border-green-500",
+                                      result?.selected_choice_id &&
+                                        !result.is_correct &&
+                                        "border-red-500"
+                                    )}
+                                    onClick={() => handleQuestionClick(q.id)}
+                                  >
+                                    {allQuestionsData.indexOf(q) + 1}
+                                    {result?.is_correct ? (
+                                      <CheckCircle className="ml-1 h-3 w-3 text-green-500" />
+                                    ) : result?.selected_choice_id ? (
+                                      <XCircle className="ml-1 h-3 w-3 text-red-500" />
+                                    ) : null}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-[200px] truncate">
+                                    {q.text}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </ScrollArea>
+              </CardContent>
+              <CardFooter className="bg-muted/20 pt-2 flex justify-center border-t">
+                <div className="text-xs text-muted-foreground flex items-center gap-4">
+                  <div className="flex items-center">
+                    <span className="w-3 h-3 rounded-full bg-green-500 mr-1"></span>
+                    Correct
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-3 h-3 rounded-full bg-red-500 mr-1"></span>
+                    Incorrect
+                  </div>
+                  <div className="flex items-center">
+                    <span className="w-3 h-3 rounded-full bg-muted-foreground mr-1"></span>
+                    Unanswered
+                  </div>
+                </div>
+              </CardFooter>
+            </Card>
+          </div>
         </div>
-        <Select value={viewMode} onValueChange={setViewMode}>
-          <SelectTrigger
-            className="w-[160px] rounded-lg sm:ml-auto"
-            aria-label="Select view mode"
+      </div>
+    </div>
+  );
+}
+
+function QuestionDetail({
+  category0,
+  category1,
+  quizFile,
+  questionId,
+  result,
+  question,
+}: {
+  category0: string;
+  category1: string;
+  quizFile: string;
+  questionId: number;
+  result?: {
+    question_id: number;
+    selected_choice_id: number | null;
+    is_correct: boolean;
+  };
+  question?: Question;
+}) {
+  if (!question || !result) {
+    return (
+      <div className="text-muted-foreground">Question data not available.</div>
+    );
+  }
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader
+        className={cn(
+          "pb-2",
+          result.is_correct
+            ? "bg-green-50 dark:bg-green-950/20"
+            : "bg-red-50 dark:bg-red-950/20"
+        )}
+      >
+        <div className="flex items-center justify-between">
+          <Badge variant="outline" className="font-normal">
+            Question {questionId}
+          </Badge>
+          <Badge
+            variant={result.is_correct ? "outline" : "outline"}
+            className={cn(
+              "font-normal",
+              result.is_correct
+                ? "border-green-500 text-green-700 dark:text-green-400"
+                : "border-red-500 text-red-700 dark:text-red-400"
+            )}
           >
-            <SelectValue placeholder="All Subjects" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl">
-            <SelectItem value="all" className="rounded-lg">
-              All Subjects
-            </SelectItem>
-            {subjects.map((subject) => (
-              <SelectItem key={subject} value={subject} className="rounded-lg">
-                {subject}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            {result.is_correct ? (
+              <CheckCircle className="mr-1 h-3 w-3" />
+            ) : (
+              <XCircle className="mr-1 h-3 w-3" />
+            )}
+            {result.is_correct ? "Correct" : "Incorrect"}
+          </Badge>
+        </div>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-[300px] w-full"
+      <CardContent className="pt-4">
+        <div
+          className={cn(
+            "rounded-lg p-4",
+            result.is_correct
+              ? "bg-green-50/50 dark:bg-green-950/10"
+              : "bg-red-50/50 dark:bg-red-950/10"
+          )}
         >
-          <AreaChart data={filteredData}>
-            <defs>
-              <linearGradient id="fillCorrect" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-correct)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-correct)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-              <linearGradient id="fillIncorrect" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-incorrect)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-incorrect)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-            </defs>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="subject"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) =>
-                value.slice(0, 10) + (value.length > 10 ? "..." : "")
-              }
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              label={{
-                value: "Number of Questions",
-                angle: -90,
-                position: "insideLeft",
-              }}
-            />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="dot" />}
-            />
-            <Area
-              dataKey="correct"
-              type="natural"
-              fill="url(#fillCorrect)"
-              stroke="var(--color-correct)"
-              stackId="a"
-            />
-            <Area
-              dataKey="incorrect"
-              type="natural"
-              fill="url(#fillIncorrect)"
-              stroke="var(--color-incorrect)"
-              stackId="a"
-            />
-            <ChartLegend content={<ChartLegendContent />} />
-          </AreaChart>
-        </ChartContainer>
+          <h3 className="mb-4 text-lg font-medium">{question.text}</h3>
+          {question.image_url && (
+            <div className="mb-4 flex justify-center">
+              <Image
+                src={question.image_url || "/placeholder.svg"}
+                alt="Question Image"
+                width={400}
+                height={300}
+                className="max-w-full rounded-md shadow-sm object-cover"
+              />
+            </div>
+          )}
+          <p className="text-sm text-muted-foreground mb-2">
+            Note: Your actual selected option isn’t available; showing simulated
+            choice based on score.
+          </p>
+          <QuestionChoicesReview
+            category0={category0}
+            category1={category1}
+            quizFile={quizFile}
+            questionId={questionId}
+            selectedChoiceId={result.selected_choice_id}
+            correctChoiceId={question.correct_choice_id}
+          />
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-// Main QuizResultsPage Component
-export default function QuizResultsPage() {
-  const router = useRouter();
-  const {
-    category0,
-    category1,
-    quizFile: rawQuizFile,
-    quizId,
-  } = useParams() as {
-    category0: string;
-    category1: string;
-    quizFile: string;
-    quizId: string;
-  };
-  const quizFile = decodeURIComponent(rawQuizFile);
-
-  const [selectedChoices, setSelectedChoices] = useState<
-    Record<number, number>
-  >({});
-  const [timeTaken, setTimeTaken] = useState<string | null>(null);
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const choicesParam = urlParams.get("choices");
-    const timeParam = urlParams.get("time");
-    if (choicesParam) {
-      setSelectedChoices(JSON.parse(decodeURIComponent(choicesParam)));
-    }
-    if (timeParam) {
-      setTimeTaken(decodeURIComponent(timeParam));
-    }
-  }, []);
-
-  const {
-    data: allQuestions = [],
-    isLoading: questionsLoading,
-    error: questionsError,
-  } = useGetAllQuestionsQuery({ category0, category1, quizFile });
-
-  const [score, setScore] = useState<number | null>(null);
-  const [scoreBySubject, setScoreBySubject] = useState<
-    Record<string, { correct: number; total: number }>
-  >({});
-  useEffect(() => {
-    if (allQuestions.length > 0 && Object.keys(selectedChoices).length > 0) {
-      const correctCount = allQuestions.reduce((acc, question) => {
-        const selectedChoice = selectedChoices[question.id];
-        const isCorrect = question.correct_choice_id
-          ? selectedChoice === question.correct_choice_id
-          : false;
-        return acc + (isCorrect ? 1 : 0);
-      }, 0);
-      setScore(correctCount);
-
-      const breakdown = allQuestions.reduce((acc, question) => {
-        const subject = question.subject_category_name;
-        if (!acc[subject]) {
-          acc[subject] = { correct: 0, total: 0 };
-        }
-        acc[subject].total += 1;
-        const isCorrect =
-          selectedChoices[question.id] === question.correct_choice_id;
-        if (isCorrect) acc[subject].correct += 1;
-        return acc;
-      }, {} as Record<string, { correct: number; total: number }>);
-      setScoreBySubject(breakdown);
-    }
-  }, [allQuestions, selectedChoices]);
-
-  const [feedback, setFeedback] = useState("");
-
-  if (questionsLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loading />
-      </div>
-    );
-  }
-
-  if (questionsError) {
-    return (
-      <div className="p-8 text-center text-destructive">
-        Error: {(questionsError as Error)?.message}
-      </div>
-    );
-  }
-
-  const totalQuestions = allQuestions.length;
-  const percentage = score !== null ? (score / totalQuestions) * 100 : 0;
-
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text(`Quiz Results: ${quizFile}`, 20, 20);
-    doc.setFontSize(12);
-    doc.text(`${category0} / ${category1}`, 20, 30);
-    doc.text(
-      `Score: ${score}/${totalQuestions} (${Math.round(percentage)}%)`,
-      20,
-      40
-    );
-    if (timeTaken) doc.text(`Time Taken: ${timeTaken}`, 20, 50);
-
-    let y = 60;
-    doc.text("Score Breakdown by Subject:", 20, y);
-    y += 10;
-    Object.entries(scoreBySubject).forEach(([subject, { correct, total }]) => {
-      doc.text(`${subject}: ${correct}/${total}`, 20, y);
-      y += 10;
-    });
-
-    y += 10;
-    doc.text("Your Answers:", 20, y);
-    y += 10;
-    allQuestions.forEach((q, index) => {
-      const selectedChoice = choicesForQuestion(q.id)?.find(
-        (c) => c.id === selectedChoices[q.id]
-      );
-      const correctChoice = choicesForQuestion(q.id)?.find(
-        (c) => c.id === q.correct_choice_id
-      );
-      doc.text(`${index + 1}. ${q.text}`, 20, y, { maxWidth: 160 });
-      y += 10;
-      doc.text(`Your Answer: ${selectedChoice?.text || "Not answered"}`, 30, y);
-      y += 10;
-      doc.text(`Correct Answer: ${correctChoice?.text}`, 30, y);
-      y += 10;
-    });
-
-    doc.save(`${quizFile}_results.pdf`);
-  };
-
-  const choicesForQuestion = (questionId: number) => {
-    const { data: choices = [] } = useGetChoicesQuery({
-      category0,
-      category1,
-      quizFile,
-      questionId,
-    });
-    return choices;
-  };
-
-  const handleRetryQuiz = () => {
-    router.push(`/quiz-app/category/${category0}/${category1}/${quizFile}`);
-  };
-
-  const handleFeedbackSubmit = () => {
-    console.log("Feedback submitted:", feedback);
-    setFeedback("");
-    alert("Thank you for your feedback!");
-  };
-
-  return (
-    <div className="container mx-auto p-4 lg:p-8">
-      <header className="mb-8">
-        <Button
-          variant="outline"
-          onClick={() =>
-            router.push(
-              `/quiz-app/category/${category0}/${category1}/${quizFile}`
-            )
-          }
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Quiz
-        </Button>
-        <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-            Quiz Results: {quizFile}
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            {category0} / {category1}
-          </p>
-          <div className="mt-4 flex flex-col items-center gap-4">
-            <Badge variant="secondary" className="text-lg py-2 px-4">
-              Score: {score}/{totalQuestions} ({Math.round(percentage)}%)
-            </Badge>
-            {timeTaken && (
-              <Badge variant="outline">Time Taken: {timeTaken}</Badge>
-            )}
-            <div className="text-sm text-muted-foreground">
-              Completed on {new Date().toLocaleDateString()}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Score Breakdown by Subject</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(scoreBySubject).map(
-              ([subject, { correct, total }]) => (
-                <div
-                  key={subject}
-                  className="flex items-center justify-between p-2 border rounded-md"
-                >
-                  <span>{subject}</span>
-                  <Badge variant="outline">
-                    {correct}/{total} ({Math.round((correct / total) * 100)}%)
-                  </Badge>
-                </div>
-              )
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <ResultAnalysis />
-
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Your Answers</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[50vh] pr-4">
-            <div className="space-y-6">
-              {allQuestions.map((question: Question) => (
-                <QuestionResult
-                  key={question.id}
-                  question={question}
-                  selectedChoiceId={selectedChoices[question.id]}
-                  category0={category0}
-                  category1={category1}
-                  quizFile={quizFile}
-                />
-              ))}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <Button onClick={handleRetryQuiz} variant="outline" className="flex-1">
-          Retry Quiz
-        </Button>
-        <Button onClick={exportToPDF} variant="outline" className="flex-1">
-          <Download className="mr-2 h-4 w-4" />
-          Export as PDF
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Provide Feedback</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
-            placeholder="Let us know your thoughts about this quiz..."
-            className="mb-4"
-          />
-          <Button onClick={handleFeedbackSubmit} disabled={!feedback.trim()}>
-            <Send className="mr-2 h-4 w-4" />
-            Submit Feedback
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// QuestionResult Component
-function QuestionResult({
-  question,
-  selectedChoiceId,
+function QuestionChoicesReview({
   category0,
   category1,
   quizFile,
+  questionId,
+  selectedChoiceId,
 }: {
-  question: Question;
-  selectedChoiceId?: number;
   category0: string;
   category1: string;
   quizFile: string;
+  questionId: number;
+  selectedChoiceId: number | null;
 }) {
   const {
     data: choices = [],
     isLoading,
     error,
-  } = useGetChoicesQuery({
-    category0,
-    category1,
-    quizFile,
-    questionId: question.id,
-  });
+  } = useGetChoicesQuery({ category0, category1, quizFile, questionId });
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-4">
-        <Loading />
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
       </div>
     );
   }
 
   if (error) {
+    console.warn(`Failed to load choices for question ${questionId}:`, error);
     return (
-      <div className="rounded-md bg-destructive/10 p-4 text-center text-destructive">
-        Error loading choices
+      <div className="text-red-500 text-sm p-3 bg-red-50/50 rounded-md">
+        Unable to load answer choices for this question.
       </div>
     );
   }
 
-  const correctChoiceId =
-    question.correct_choice_id || choices.find((c) => c.is_correct)?.id;
-  const isCorrect = selectedChoiceId === correctChoiceId;
-  const cardClass = isCorrect
-    ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-    : selectedChoiceId
-    ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-    : "border-muted";
-
   return (
-    <Card className={`transition-all ${cardClass}`}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <Badge variant="outline">{question.subject_category_name}</Badge>
-          {isCorrect ? (
-            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-          ) : selectedChoiceId ? (
-            <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-          ) : null}
-        </div>
-        <CardTitle className="text-lg">{question.text}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          {choices.map((choice: Choice) => {
-            const isSelected = choice.id === selectedChoiceId;
-            const isCorrectChoice = choice.id === correctChoiceId;
-            const textClass = isSelected
-              ? isCorrectChoice
-                ? "text-green-700 dark:text-green-300 font-medium"
-                : "text-red-700 dark:text-red-300 font-medium"
-              : isCorrectChoice
-              ? "text-green-600 dark:text-green-400"
-              : "text-foreground";
+    <CardContent>
+      <div className="space-y-2">
+        {choices.map((choice: Choice) => {
+          const isSelected = choice.id === selectedChoiceId;
+          const isCorrectChoice = choice.is_correct;
+          const textClass = isSelected
+            ? isCorrectChoice
+              ? "text-green-700 dark:text-green-300 font-medium"
+              : "text-red-700 dark:text-red-300 font-medium"
+            : isCorrectChoice
+            ? "text-green-600 dark:text-green-400"
+            : "text-foreground";
 
-            return (
-              <div
-                key={choice.id}
-                className="flex items-start gap-2 rounded-md p-2 hover:bg-muted/50"
+          return (
+            <div
+              key={choice.id}
+              className="flex items-start gap-2 rounded-md p-2 hover:bg-muted/50"
+            >
+              <span
+                className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                  isSelected
+                    ? isCorrectChoice
+                      ? "border-green-500 bg-green-200 dark:bg-green-700"
+                      : "border-red-500 bg-red-200 dark:bg-red-700"
+                    : "border-muted"
+                }`}
               >
-                <span
-                  className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                    isSelected
-                      ? isCorrectChoice
-                        ? "border-green-500 bg-green-200 dark:bg-green-700"
-                        : "border-red-500 bg-red-200 dark:bg-red-700"
-                      : "border-muted"
-                  }`}
-                >
-                  {isSelected && (
-                    <span
-                      className={
-                        isCorrectChoice
-                          ? "h-2 w-2 rounded-full bg-green-600 dark:bg-green-400"
-                          : "h-2 w-2 rounded-full bg-red-600 dark:bg-red-400"
-                      }
-                    />
-                  )}
-                </span>
-                <p className={textClass}>
-                  {choice.text}
-                  {isCorrectChoice && !isSelected && " (Correct)"}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-      <Separator />
-    </Card>
+                {isSelected && (
+                  <span
+                    className={
+                      isCorrectChoice
+                        ? "h-2 w-2 rounded-full bg-green-600 dark:bg-green-400"
+                        : "h-2 w-2 rounded-full bg-red-600 dark:bg-red-400"
+                    }
+                  />
+                )}
+              </span>
+              <p className={textClass}>
+                {choice.text}
+                {isCorrectChoice && !isSelected && " (Correct)"}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </CardContent>
   );
 }
-
-// "use client";
-
-// import { useEffect, useState } from "react";
-// import { useParams, useRouter } from "next/navigation";
-// import {
-//   useGetAllQuestionsQuery,
-//   useGetChoicesQuery,
-// } from "@/redux/features/quizApiSlice";
-// import { Button } from "@/components/ui/button";
-// import {
-//   Card,
-//   CardContent,
-//   CardHeader,
-//   CardTitle,
-//   CardDescription,
-// } from "@/components/ui/card";
-// import { ScrollArea } from "@/components/ui/scroll-area";
-// import { Badge } from "@/components/ui/badge";
-// import { Separator } from "@/components/ui/separator";
-// import { Textarea } from "@/components/ui/textarea";
-// import { CheckCircle, XCircle, ArrowLeft, Download, Send } from "lucide-react";
-// import Loading from "@/loading/Loading";
-// import jsPDF from "jspdf";
-// import * as React from "react";
-// import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-// import {
-//   ChartConfig,
-//   ChartContainer,
-//   ChartLegend,
-//   ChartLegendContent,
-//   ChartTooltip,
-//   ChartTooltipContent,
-// } from "@/components/ui/chart";
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select";
-
-// // Interfaces
-// interface Question {
-//   id: number;
-//   text: string;
-//   subject_category_name: string;
-//   correct_choice_id?: number;
-// }
-
-// interface Choice {
-//   id: number;
-//   text: string;
-//   is_correct: boolean;
-// }
-
-// interface ChartData {
-//   subject: string;
-//   correct: number;
-//   incorrect: number;
-// }
-
-// // Chart Config
-// const chartConfig = {
-//   performance: { label: "Performance" },
-//   correct: { label: "Correct Answers", color: "#10B981" },
-//   incorrect: { label: "Incorrect Answers", color: "#EF4444" },
-// } satisfies ChartConfig;
-
-// // ResultAnalysis Component
-// function ResultAnalysis({
-//   allQuestions,
-//   selectedChoices,
-// }: {
-//   allQuestions: Question[];
-//   selectedChoices: Record<number, number>;
-// }) {
-//   const [viewMode, setViewMode] = React.useState("all");
-
-//   const chartData: ChartData[] = React.useMemo(() => {
-//     if (!allQuestions.length || !Object.keys(selectedChoices).length) return [];
-
-//     const subjectStats = allQuestions.reduce((acc, question) => {
-//       const subject = question.subject_category_name;
-//       if (!acc[subject]) {
-//         acc[subject] = { correct: 0, incorrect: 0, total: 0 };
-//       }
-//       acc[subject].total += 1;
-//       const selectedChoice = selectedChoices[question.id];
-//       const isCorrect = question.correct_choice_id
-//         ? selectedChoice === question.correct_choice_id
-//         : false;
-//       if (isCorrect) {
-//         acc[subject].correct += 1;
-//       } else if (selectedChoice) {
-//         acc[subject].incorrect += 1;
-//       }
-//       return acc;
-//     }, {} as Record<string, { correct: number; incorrect: number; total: number }>);
-
-//     return Object.entries(subjectStats).map(([subject, stats]) => ({
-//       subject,
-//       correct: stats.correct,
-//       incorrect: stats.incorrect,
-//     }));
-//   }, [allQuestions, selectedChoices]);
-
-//   const filteredData = chartData.filter((item) =>
-//     viewMode === "all" ? true : item.subject === viewMode
-//   );
-
-//   if (!chartData.length) {
-//     return <div>No quiz data available to display.</div>;
-//   }
-
-//   const subjects = Array.from(new Set(chartData.map((item) => item.subject)));
-
-//   return (
-//     <Card className="mb-6">
-//       <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
-//         <div className="grid flex-1 gap-1 text-center sm:text-left">
-//           <CardTitle>Quiz Performance Analysis</CardTitle>
-//           <CardDescription>
-//             Your performance by subject category
-//           </CardDescription>
-//         </div>
-//         <Select value={viewMode} onValueChange={setViewMode}>
-//           <SelectTrigger className="w-[160px] rounded-lg sm:ml-auto">
-//             <SelectValue placeholder="All Subjects" />
-//           </SelectTrigger>
-//           <SelectContent className="rounded-xl">
-//             <SelectItem value="all">All Subjects</SelectItem>
-//             {subjects.map((subject) => (
-//               <SelectItem key={subject} value={subject}>
-//                 {subject}
-//               </SelectItem>
-//             ))}
-//           </SelectContent>
-//         </Select>
-//       </CardHeader>
-//       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-//         <ChartContainer
-//           config={chartConfig}
-//           className="aspect-auto h-[300px] w-full"
-//         >
-//           <AreaChart data={filteredData}>
-//             <defs>
-//               <linearGradient id="fillCorrect" x1="0" y1="0" x2="0" y2="1">
-//                 <stop offset="5%" stopColor="#10B981" stopOpacity={0.8} />
-//                 <stop offset="95%" stopColor="#10B981" stopOpacity={0.1} />
-//               </linearGradient>
-//               <linearGradient id="fillIncorrect" x1="0" y1="0" x2="0" y2="1">
-//                 <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8} />
-//                 <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1} />
-//               </linearGradient>
-//             </defs>
-//             <CartesianGrid vertical={false} />
-//             <XAxis
-//               dataKey="subject"
-//               tickLine={false}
-//               axisLine={false}
-//               tickMargin={8}
-//               tickFormatter={(value) =>
-//                 value.slice(0, 10) + (value.length > 10 ? "..." : "")
-//               }
-//             />
-//             <YAxis
-//               tickLine={false}
-//               axisLine={false}
-//               tickMargin={8}
-//               label={{
-//                 value: "Number of Questions",
-//                 angle: -90,
-//                 position: "insideLeft",
-//               }}
-//             />
-//             <ChartTooltip
-//               cursor={false}
-//               content={<ChartTooltipContent indicator="dot" />}
-//             />
-//             <Area
-//               dataKey="correct"
-//               type="natural"
-//               fill="url(#fillCorrect)"
-//               stroke="#10B981"
-//               stackId="a"
-//             />
-//             <Area
-//               dataKey="incorrect"
-//               type="natural"
-//               fill="url(#fillIncorrect)"
-//               stroke="#EF4444"
-//               stackId="a"
-//             />
-//             <ChartLegend content={<ChartLegendContent />} />
-//           </AreaChart>
-//         </ChartContainer>
-//       </CardContent>
-//     </Card>
-//   );
-// }
-
-// // Main QuizResultsPage Component
-// export default function QuizResultsPage() {
-//   const router = useRouter();
-//   const {
-//     category0,
-//     category1,
-//     quizFile: rawQuizFile,
-//     quizId,
-//   } = useParams() as {
-//     category0: string;
-//     category1: string;
-//     quizFile: string;
-//     quizId: string;
-//   };
-//   const quizFile = decodeURIComponent(rawQuizFile);
-
-//   const [selectedChoices, setSelectedChoices] = useState<
-//     Record<number, number>
-//   >({});
-//   const [timeTaken, setTimeTaken] = useState<string | null>(null);
-//   const [isInitialLoad, setIsInitialLoad] = useState(true);
-
-//   useEffect(() => {
-//     if (!isInitialLoad) return;
-//     const urlParams = new URLSearchParams(window.location.search);
-//     const choicesParam = urlParams.get("choices");
-//     const timeParam = urlParams.get("time");
-//     if (choicesParam) {
-//       try {
-//         setSelectedChoices(JSON.parse(decodeURIComponent(choicesParam)));
-//       } catch (error) {
-//         console.error("Failed to parse choices:", error);
-//       }
-//     }
-//     if (timeParam) {
-//       setTimeTaken(decodeURIComponent(timeParam));
-//     }
-//     setIsInitialLoad(false);
-//   }, [isInitialLoad]);
-
-//   const {
-//     data: allQuestions = [],
-//     isLoading: questionsLoading,
-//     error: questionsError,
-//   } = useGetAllQuestionsQuery({ category0, category1, quizFile });
-
-//   const [score, setScore] = useState<number | null>(null);
-//   const [scoreBySubject, setScoreBySubject] = useState<
-//     Record<string, { correct: number; total: number }>
-//   >({});
-
-//   useEffect(() => {
-//     if (allQuestions.length > 0 && Object.keys(selectedChoices).length > 0) {
-//       const correctCount = allQuestions.reduce((acc, question) => {
-//         const selectedChoice = selectedChoices[question.id];
-//         const isCorrect = question.correct_choice_id
-//           ? selectedChoice === question.correct_choice_id
-//           : false;
-//         return acc + (isCorrect ? 1 : 0);
-//       }, 0);
-//       setScore(correctCount);
-
-//       const breakdown = allQuestions.reduce((acc, question) => {
-//         const subject = question.subject_category_name;
-//         if (!acc[subject]) {
-//           acc[subject] = { correct: 0, total: 0 };
-//         }
-//         acc[subject].total += 1;
-//         const isCorrect =
-//           selectedChoices[question.id] === question.correct_choice_id;
-//         if (isCorrect) acc[subject].correct += 1;
-//         return acc;
-//       }, {} as Record<string, { correct: number; total: number }>);
-//       setScoreBySubject(breakdown);
-//     }
-//   }, [allQuestions, selectedChoices]);
-
-//   const [feedback, setFeedback] = useState("");
-
-//   if (questionsLoading) {
-//     return (
-//       <div className="flex h-screen w-full items-center justify-center">
-//         <Loading />
-//       </div>
-//     );
-//   }
-
-//   if (questionsError) {
-//     return (
-//       <div className="p-8 text-center text-destructive">
-//         Error: {(questionsError as Error)?.message}
-//       </div>
-//     );
-//   }
-
-//   const totalQuestions = allQuestions.length;
-//   const percentage = score !== null ? (score / totalQuestions) * 100 : 0;
-
-//   const exportToPDF = () => {
-//     const doc = new jsPDF();
-//     doc.setFontSize(16);
-//     doc.text(`Quiz Results: ${quizFile}`, 20, 20);
-//     doc.setFontSize(12);
-//     doc.text(`${category0} / ${category1}`, 20, 30);
-//     doc.text(
-//       `Score: ${score}/${totalQuestions} (${Math.round(percentage)}%)`,
-//       20,
-//       40
-//     );
-//     if (timeTaken) doc.text(`Time Taken: ${timeTaken}`, 20, 50);
-
-//     let y = 60;
-//     doc.text("Score Breakdown by Subject:", 20, y);
-//     y += 10;
-//     Object.entries(scoreBySubject).forEach(([subject, { correct, total }]) => {
-//       doc.text(`${subject}: ${correct}/${total}`, 20, y);
-//       y += 10;
-//     });
-
-//     y += 10;
-//     doc.text("Your Answers:", 20, y);
-//     y += 10;
-//     allQuestions.forEach((q, index) => {
-//       const choices = choicesForQuestion(q.id);
-//       const selectedChoice = choices.find(
-//         (c) => c.id === selectedChoices[q.id]
-//       );
-//       const correctChoice = choices.find((c) => c.id === q.correct_choice_id);
-//       doc.text(`${index + 1}. ${q.text}`, 20, y, { maxWidth: 160 });
-//       y += 10;
-//       doc.text(`Your Answer: ${selectedChoice?.text || "Not answered"}`, 30, y);
-//       y += 10;
-//       doc.text(`Correct Answer: ${correctChoice?.text}`, 30, y);
-//       y += 10;
-//     });
-
-//     doc.save(`${quizFile}_results.pdf`);
-//   };
-
-//   const choicesForQuestion = (questionId: number) => {
-//     const { data: choices = [] } = useGetChoicesQuery({
-//       category0,
-//       category1,
-//       quizFile,
-//       questionId,
-//     });
-//     return choices;
-//   };
-
-//   const handleRetryQuiz = () => {
-//     router.push(`/quiz-app/category/${category0}/${category1}/${quizFile}`);
-//   };
-
-//   const handleFeedbackSubmit = () => {
-//     console.log("Feedback submitted:", feedback);
-//     setFeedback("");
-//     alert("Thank you for your feedback!");
-//   };
-
-//   return (
-//     <div className="container mx-auto p-4 lg:p-8">
-//       <header className="mb-8">
-//         <Button variant="outline" onClick={handleRetryQuiz} className="mb-4">
-//           <ArrowLeft className="mr-2 h-4 w-4" />
-//           Back to Quiz
-//         </Button>
-//         <div className="text-center">
-//           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-//             Quiz Results: {quizFile}
-//           </h1>
-//           <p className="text-muted-foreground mt-2">
-//             {category0} / {category1}
-//           </p>
-//           <div className="mt-4 flex flex-col items-center gap-4">
-//             <Badge variant="secondary" className="text-lg py-2 px-4">
-//               Score: {score ?? "N/A"}/{totalQuestions} ({Math.round(percentage)}
-//               %)
-//             </Badge>
-//             {timeTaken && (
-//               <Badge variant="outline">Time Taken: {timeTaken}</Badge>
-//             )}
-//             <div className="text-sm text-muted-foreground">
-//               Completed on {new Date().toLocaleDateString()}
-//             </div>
-//           </div>
-//         </div>
-//       </header>
-
-//       <Card className="mb-6">
-//         <CardHeader>
-//           <CardTitle>Score Breakdown by Subject</CardTitle>
-//           <CardDescription>
-//             Your performance across different subjects
-//           </CardDescription>
-//         </CardHeader>
-//         <CardContent>
-//           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//             {Object.entries(scoreBySubject).map(
-//               ([subject, { correct, total }]) => (
-//                 <div
-//                   key={subject}
-//                   className="flex items-center justify-between p-2 border rounded-md"
-//                 >
-//                   <span>{subject}</span>
-//                   <Badge variant="outline">
-//                     {correct}/{total} ({Math.round((correct / total) * 100)}%)
-//                   </Badge>
-//                 </div>
-//               )
-//             )}
-//           </div>
-//         </CardContent>
-//       </Card>
-
-//       <ResultAnalysis
-//         allQuestions={allQuestions}
-//         selectedChoices={selectedChoices}
-//       />
-
-//       <Card className="mb-6">
-//         <CardHeader>
-//           <CardTitle>Your Selected Answers</CardTitle>
-//           <CardDescription>
-//             Review your choices compared to the correct answers
-//           </CardDescription>
-//         </CardHeader>
-//         <CardContent>
-//           <ScrollArea className="h-[50vh] pr-4">
-//             <div className="space-y-6">
-//               {allQuestions.map((question) => (
-//                 <QuestionResult
-//                   key={question.id}
-//                   question={question}
-//                   selectedChoiceId={selectedChoices[question.id]}
-//                   category0={category0}
-//                   category1={category1}
-//                   quizFile={quizFile}
-//                 />
-//               ))}
-//             </div>
-//           </ScrollArea>
-//         </CardContent>
-//       </Card>
-
-//       <div className="flex flex-col md:flex-row gap-4 mb-6">
-//         <Button onClick={handleRetryQuiz} variant="outline" className="flex-1">
-//           Retry Quiz
-//         </Button>
-//         <Button onClick={exportToPDF} variant="outline" className="flex-1">
-//           <Download className="mr-2 h-4 w-4" />
-//           Export as PDF
-//         </Button>
-//       </div>
-
-//       <Card>
-//         <CardHeader>
-//           <CardTitle>Provide Feedback</CardTitle>
-//         </CardHeader>
-//         <CardContent>
-//           <Textarea
-//             value={feedback}
-//             onChange={(e) => setFeedback(e.target.value)}
-//             placeholder="Let us know your thoughts about this quiz..."
-//             className="mb-4"
-//           />
-//           <Button onClick={handleFeedbackSubmit} disabled={!feedback.trim()}>
-//             <Send className="mr-2 h-4 w-4" />
-//             Submit Feedback
-//           </Button>
-//         </CardContent>
-//       </Card>
-//     </div>
-//   );
-// }
-
-// // QuestionResult Component
-// function QuestionResult({
-//   question,
-//   selectedChoiceId,
-//   category0,
-//   category1,
-//   quizFile,
-// }: {
-//   question: Question;
-//   selectedChoiceId?: number;
-//   category0: string;
-//   category1: string;
-//   quizFile: string;
-// }) {
-//   const {
-//     data: choices = [],
-//     isLoading,
-//     error,
-//   } = useGetChoicesQuery({
-//     category0,
-//     category1,
-//     quizFile,
-//     questionId: question.id,
-//   });
-
-//   if (isLoading) {
-//     return (
-//       <div className="flex items-center justify-center py-4">
-//         <Loading />
-//       </div>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <div className="rounded-md bg-destructive/10 p-4 text-center text-destructive">
-//         Error loading choices
-//       </div>
-//     );
-//   }
-
-//   const correctChoiceId =
-//     question.correct_choice_id || choices.find((c) => c.is_correct)?.id;
-//   const isCorrect = selectedChoiceId === correctChoiceId;
-//   const selectedChoice = choices.find((c) => c.id === selectedChoiceId);
-//   const correctChoice = choices.find((c) => c.id === correctChoiceId);
-//   const cardClass = isCorrect
-//     ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-//     : selectedChoiceId
-//     ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-//     : "border-muted";
-
-//   return (
-//     <Card className={`transition-all ${cardClass}`}>
-//       <CardHeader>
-//         <div className="flex items-center justify-between">
-//           <Badge variant="outline">{question.subject_category_name}</Badge>
-//           {isCorrect ? (
-//             <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-//           ) : selectedChoiceId ? (
-//             <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-//           ) : null}
-//         </div>
-//         <CardTitle className="text-lg">{question.text}</CardTitle>
-//       </CardHeader>
-//       <CardContent>
-//         <div className="space-y-2">
-//           <div className="flex items-start gap-2 p-2 rounded-md bg-muted/50">
-//             <span className="h-4 w-4 rounded-full border border-blue-500 bg-blue-200 dark:bg-blue-700 flex items-center justify-center">
-//               {selectedChoice && (
-//                 <span className="h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400" />
-//               )}
-//             </span>
-//             <p className="text-blue-700 dark:text-blue-300 font-medium">
-//               Your Answer: {selectedChoice?.text || "Not answered"}
-//             </p>
-//           </div>
-//           <div className="flex items-start gap-2 p-2 rounded-md">
-//             <span className="h-4 w-4 rounded-full border border-green-500 bg-green-200 dark:bg-green-700 flex items-center justify-center">
-//               <span className="h-2 w-2 rounded-full bg-green-600 dark:bg-green-400" />
-//             </span>
-//             <p className="text-green-600 dark:text-green-400">
-//               Correct Answer: {correctChoice?.text}
-//             </p>
-//           </div>
-//           {!isCorrect && selectedChoiceId && (
-//             <p className="text-sm text-muted-foreground">
-//               Explanation: Review this question to improve next time.
-//             </p>
-//           )}
-//         </div>
-//       </CardContent>
-//       <Separator />
-//     </Card>
-//   );
-// }

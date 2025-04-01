@@ -99,7 +99,7 @@ export default function Navbar() {
             variant="secondary"
             className="rounded-xl font-medium px-6"
           >
-            <Link href="/auth/login">Log In</Link>
+            {/* <Link href="/auth/login">Open</Link> */}
           </Button>
 
           <Button
@@ -110,7 +110,7 @@ export default function Navbar() {
               "text-white"
             )}
           >
-            <Link href="/auth/register">Sign Up</Link>
+            <Link href="/auth/login">Open Dashboard</Link>
           </Button>
         </div>
 

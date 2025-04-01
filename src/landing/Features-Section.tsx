@@ -23,7 +23,7 @@ export default function FeaturesSection() {
         "Work together with peers on documents, projects, and presentations in real-time with synchronized editing and changes.",
       icon: <Users className="h-6 w-6" aria-hidden="true" />,
       color: "from-blue-500 to-indigo-600",
-      image: "/Frame 47.svg",
+      image: "/Features/Real-time Collaboration.svg",
     },
     {
       title: "Result Analysis & Leaderboard",
@@ -39,7 +39,7 @@ export default function FeaturesSection() {
         "Collaborate on our intelligent whiteboard and experiment in our AI-driven lab environment for enhanced learning.",
       icon: <Brain className="h-6 w-6" aria-hidden="true" />,
       color: "from-emerald-500 to-green-600",
-      image: "/Frame 47.svg",
+      image: "/Features/AI-Powered Whiteboard.svg",
     },
     {
       title: "Real-time Chat with Mentors",
@@ -47,7 +47,7 @@ export default function FeaturesSection() {
         "Connect instantly with high-ranking users and mentors for guidance, support, and collaborative learning.",
       icon: <MessageSquare className="h-6 w-6" aria-hidden="true" />,
       color: "from-purple-500 to-violet-600",
-      image: "/Frame 47.svg",
+      image: "/Features/Real-time Chat.svg",
     },
     {
       title: "Personalized Skill Improvement",
@@ -87,7 +87,9 @@ export default function FeaturesSection() {
               Everything you need to excel in your education
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground max-w-[600px]">
-              Our platform combines cutting-edge technology with comprehensive educational resources tailored for Nepalese students preparing for various competitive exams.
+              Our platform combines cutting-edge technology with comprehensive
+              educational resources tailored for Nepalese students preparing for
+              various competitive exams.
             </p>
             <ul className="space-y-3 mt-6">
               {features.map((feature, index) => (

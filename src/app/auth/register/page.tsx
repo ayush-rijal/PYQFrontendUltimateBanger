@@ -1,36 +1,40 @@
-import Link from 'next/link';
-import { RegisterForm } from '@/components/forms';
-import { SocialButtons } from '@/components/common';
-import type { Metadata } from 'next';
+import Link from "next/link";
+import { RegisterForm } from "@/components/forms";
+import { SocialButtons } from "@/components/common";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'Register for PYQ | Create Your Quiz Account',
-  description: 'Sign up for PYQ to access premium quizzes, track your progress, and enhance your learning experience. Create your account today!',
-  keywords: 'register, sign up, PYQ, quiz app, online learning, account creation',
+  title: "Register for PYQ | Create Your Quiz Account",
+  description:
+    "Sign up for PYQ to access premium quizzes, track your progress, and enhance your learning experience. Create your account today!",
+  keywords:
+    "register, sign up, PYQ, quiz app, online learning, account creation",
   openGraph: {
-    title: 'Register for PYQ | Create Your Quiz Account',
-    description: 'Join PYQ to unlock premium quizzes and personalized learning tools. Sign up now!',
-    url: 'https://yourdomain.com/auth/register', // Replace with your actual domain
-    siteName: 'PYQ',
+    title: "Register for PYQ | Create Your Quiz Account",
+    description:
+      "Join PYQ to unlock premium quizzes and personalized learning tools. Sign up now!",
+    url: "https://yourdomain.com/auth/register", // Replace with your actual domain
+    siteName: "PYQ",
     images: [
       {
-        url: 'https://yourdomain.com/og-image.jpg', // Replace with your OG image URL
+        url: "https://yourdomain.com/og-image.jpg", // Replace with your OG image URL
         width: 1200,
         height: 630,
-        alt: 'PYQ Registration Page',
+        alt: "PYQ Registration Page",
       },
     ],
-    locale: 'en_US',
-    type: 'website',
+    locale: "en_US",
+    type: "website",
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'Register for PYQ | Create Your Quiz Account',
-    description: 'Sign up for PYQ to access premium quizzes and track your progress. Join now!',
-    images: ['https://yourdomain.com/twitter-image.jpg'], // Replace with your Twitter image URL
+    card: "summary_large_image",
+    title: "Register for PYQ | Create Your Quiz Account",
+    description:
+      "Sign up for PYQ to access premium quizzes and track your progress. Join now!",
+    images: ["https://yourdomain.com/twitter-image.jpg"], // Replace with your Twitter image URL
   },
   alternates: {
-    canonical: 'https://yourdomain.com/auth/register', // Replace with your actual domain
+    canonical: "https://yourdomain.com/auth/register", // Replace with your actual domain
   },
 };
 
@@ -38,7 +42,10 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex flex-col justify-center px-6 py-12 lg:px-8 rounded-4xl">
       {/* Container */}
-      <section className="sm:mx-auto sm:w-full sm:max-w-md" aria-labelledby="register-heading">
+      <section
+        className="sm:mx-auto sm:w-full sm:max-w-md"
+        aria-labelledby="register-heading"
+      >
         {/* Logo */}
         <div className="flex justify-center">
           <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg">
@@ -60,9 +67,14 @@ export default function Page() {
       </section>
 
       {/* Form Section */}
-      <section className="mt-10 sm:mx-auto sm:w-full sm:max-w-md" aria-label="Registration Form">
+      <section
+        className="mt-10 sm:mx-auto sm:w-full sm:max-w-md"
+        aria-label="Registration Form"
+      >
         <div className="bg-white dark:bg-gray-800 py-8 px-6 shadow-xl rounded-xl sm:px-10 border border-gray-200 dark:border-gray-700">
-          <RegisterForm />
+          <div className="hidden">
+            <RegisterForm />
+          </div>
           <div className="relative mt-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
@@ -78,7 +90,7 @@ export default function Page() {
 
         {/* Login Link */}
         <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-          Already have an account?{' '}
+          Already have an account?{" "}
           <Link
             href="/auth/login"
             className="font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors duration-200"

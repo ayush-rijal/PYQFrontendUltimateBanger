@@ -122,7 +122,7 @@ export default function Footer() {
         {/* Bottom Section */}
         <div className="border-t mt-12 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground text-center sm:text-left">
-            © {new Date().getFullYear()} EduNova. All rights reserved.
+            © {new Date().getFullYear()} PastYearQuestion. All rights reserved.
           </p>
           <nav aria-label="Social media links">
             <ul className="flex gap-6">
