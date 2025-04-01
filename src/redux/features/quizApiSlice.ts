@@ -437,9 +437,11 @@ submitQuiz:builder.mutation({
   })
 }),
 
-  getQuizResult:builder.query({
-    query:({category0,category1,quizFile})=>`${category0}/${category1}/${quizFile}/result/`
-  }),
+
+  //it is being  done from localstorage dude 
+  // getQuizResult:builder.query({
+  //   query:({category0,category1,quizFile})=>`${category0}/${category1}/${quizFile}/result/`
+  // }),
 
   getLeaderboard:builder.query({
     query:()=>'quiz-leaderboard/',
@@ -458,6 +460,6 @@ export const {
   useGetChoicesQuery,
   useGetAllQuestionsQuery,
   useSubmitQuizMutation,
-  useGetQuizResultQuery,
+  // useGetQuizResultQuery,
   useGetLeaderboardQuery,
 } = quizApiSlice;

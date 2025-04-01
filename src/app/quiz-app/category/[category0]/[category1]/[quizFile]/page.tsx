@@ -150,6 +150,13 @@ export default function QuizPage() {
       }).unwrap();
       console.log("Submitted successfully:", result);
       const quizId = uuidv4();
+      localStorage.setItem(`quizResult_${quizId}`, JSON.stringify(result));
+
+      //here using local storage instead of redux ,either way can be used
+
+
+
+
       router.push(
         `/quiz-app/category/${category0}/${category1}/${quizFile}/results/${quizId}`
       );

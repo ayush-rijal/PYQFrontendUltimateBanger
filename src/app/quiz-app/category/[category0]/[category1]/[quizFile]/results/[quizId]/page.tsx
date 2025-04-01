@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useGetQuizResultQuery, useGetAllQuestionsQuery ,useGetChoicesQuery} from "@/redux/features/quizApiSlice";
+import { useGetAllQuestionsQuery ,useGetChoicesQuery} from "@/redux/features/quizApiSlice";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,11 +32,26 @@ interface Choice {
   is_correct: boolean;
 }
 
-interface QuizResult {
-  questions_file: string; // title from serializer
-  points: number;
-  completed_at: string | null;
+interface Response{
+  question:number;
+  selected_choice:number;
+  is_submitted:boolean,
+  }
+
+
+// interface QuizResult {
+//   questions_file: string; // title from serializer
+//   points: number;
+//   completed_at: string | null;
+// }
+interface QuizResult{
+  status:string;
+  points:number;
+  total_questions:number;
+  responses:Response[];
 }
+
+
 
 export default function QuizResultsPage() {
   const router = useRouter();
@@ -53,12 +68,35 @@ export default function QuizResultsPage() {
   };
   const quizFile = decodeURIComponent(rawQuizFile);
 
-  // Fetch quiz result from backend
-  const {
-    data: result,
-    isLoading: resultLoading,
-    error: resultError,
-  } = useGetQuizResultQuery({ category0, category1, quizFile });
+  //get the quiz result from localStorge
+  const[quizResult,setQuizResult]=useState<QuizResult | null>(null);
+
+  useEffect(()=>{
+    const storedResult = localStorage.getItem(`quizResult_${quizId}`);    
+    console.log("Stored result from localStorage:", storedResult);
+    if(storedResult){
+      setQuizResult(JSON.parse(storedResult));
+      
+
+      //Opitonal :Clean up after loading
+      localStorage.removeItem('quizResult_${quizId}');
+    }
+    else {
+      console.log("No result found in localStorage for quizId:", quizId);
+      // Fallback: redirect back to quiz page if no result
+      router.push(`/quiz-app/category/${category0}/${category1}/${quizFile}`);
+    }
+  },[quizId, router, category0, category1, quizFile]);
+  
+
+
+  // //for now doing from localstorge so not required this redux now
+  // // Fetch quiz result from backend
+  // const {
+  //   data: result,
+  //   isLoading: resultLoading,
+  //   error: resultError,
+  // } = useGetQuizResultQuery({ category0, category1, quizFile });
 
   // Fetch all questions for answer display and total count
   const {
@@ -67,92 +105,125 @@ export default function QuizResultsPage() {
     error: questionsError,
   } = useGetAllQuestionsQuery({ category0, category1, quizFile });
 
-  const [timeTaken, setTimeTaken] = useState<string | null>(null);
-  const [selectedChoices, setSelectedChoices] = useState<Record<number, number>>({});
-  const [feedback, setFeedback] = useState("");
+  // const [timeTaken, setTimeTaken] = useState<string | null>(null);
+  // const [selectedChoices, setSelectedChoices] = useState<Record<number, number>>({});
+  // const [feedback, setFeedback] = useState("");
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const choicesParam = urlParams.get("choices");
-    const timeParam = urlParams.get("time");
-    if (choicesParam) {
-      setSelectedChoices(JSON.parse(decodeURIComponent(choicesParam)));
-    }
-    if (timeParam) {
-      setTimeTaken(decodeURIComponent(timeParam));
-    }
-  }, []);
+  // useEffect(() => {
+  //   const urlParams = new URLSearchParams(window.location.search);
+  //   const choicesParam = urlParams.get("choices");
+  //   const timeParam = urlParams.get("time");
+  //   if (choicesParam) {
+  //     setSelectedChoices(JSON.parse(decodeURIComponent(choicesParam)));
+  //   }
+  //   if (timeParam) {
+  //     setTimeTaken(decodeURIComponent(timeParam));
+  //   }
+  // }, []);
 
-  if (resultLoading || questionsLoading) {
+  // if (resultLoading || questionsLoading) {
+  //   return (
+  //     <div className="flex h-screen w-full items-center justify-center">
+  //       <Loading />
+  //     </div>
+  //   );
+  // }
+
+  // if (resultError || questionsError) {
+  //   return (
+  //     <div className="p-8 text-center text-destructive">
+  //       Error: {(resultError as any)?.data?.detail || (questionsError as Error)?.message || "Failed to load results"}
+  //     </div>
+  //   );
+  // }
+
+  // const score = result?.points || 0;
+  // const totalQuestions = allQuestions.length;
+  // const maxPossibleScore = totalQuestions ; // 10 points per question from backend logic
+  // const percentage = maxPossibleScore > 0 ? (score / maxPossibleScore) * 100 : 0;
+
+  // const exportToPDF = () => {
+  //   const doc = new jsPDF();
+  //   doc.setFontSize(16);
+  //   doc.text(`Quiz Results: ${quizFile}`, 20, 20);
+  //   doc.setFontSize(12);
+  //   doc.text(`${category0} / ${category1}`, 20, 30);
+  //   doc.text(`Score: ${score}/${maxPossibleScore} (${Math.round(percentage)}%)`, 20, 40);
+  //   if (timeTaken) doc.text(`Time Taken: ${timeTaken}`, 20, 50);
+
+  //   let y = 60;
+  //   doc.text("Your Answers:", 20, y);
+  //   y += 10;
+  //   allQuestions.forEach((q: Question, index: number) => {
+  //     const selectedChoice = choicesForQuestion(q.id)?.find(
+  //       (c: Choice) => c.id === selectedChoices[q.id]
+  //     );
+  //     const correctChoice = choicesForQuestion(q.id)?.find(
+  //       (c: Choice) => c.is_correct
+  //     );
+  //     doc.text(`${index + 1}. ${q.text}`, 20, y, { maxWidth: 160 });
+  //     y += 10;
+  //     doc.text(`Your Answer: ${selectedChoice?.text || "Not answered"}`, 30, y);
+  //     y += 10;
+  //     doc.text(`Correct Answer: ${correctChoice?.text || "N/A"}`, 30, y);
+  //     y += 15;
+  //   });
+
+  //   doc.save(`${quizFile}_results.pdf`);
+  // };
+
+  // const choicesForQuestion = (questionId: number) => {
+  //   const { data: choices = [] } = useGetChoicesQuery({
+  //     category0,
+  //     category1,
+  //     quizFile,
+  //     questionId,
+  //   });
+  //   return choices;
+  // };
+
+  // const handleRetryQuiz = () => {
+  //   router.push(`/quiz-app/category/${category0}/${category1}/${quizFile}`);
+  // };
+
+  // const handleFeedbackSubmit = () => {
+  //   console.log("Feedback submitted:", feedback);
+  //   setFeedback("");
+  //   alert("Thank you for your feedback!");
+  // };
+
+  if (questionsLoading || !quizResult){
     return (
       <div className="flex h-screen w-full items-center justify-center">
-        <Loading />
+        <Loading/>
       </div>
-    );
+    )
   }
 
-  if (resultError || questionsError) {
-    return (
-      <div className="p-8 text-center text-destructive">
-        Error: {(resultError as any)?.data?.detail || (questionsError as Error)?.message || "Failed to load results"}
-      </div>
-    );
-  }
+if (questionsError) {
 
-  const score = result?.points || 0;
-  const totalQuestions = allQuestions.length;
-  const maxPossibleScore = totalQuestions ; // 10 points per question from backend logic
-  const percentage = maxPossibleScore > 0 ? (score / maxPossibleScore) * 100 : 0;
+  return (
+    <div className="p-8 text-center text-destructive">
+      Error:{(questionsError as Error)?.message || "Failed to load results"}
+    </div>
+  );
 
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text(`Quiz Results: ${quizFile}`, 20, 20);
-    doc.setFontSize(12);
-    doc.text(`${category0} / ${category1}`, 20, 30);
-    doc.text(`Score: ${score}/${maxPossibleScore} (${Math.round(percentage)}%)`, 20, 40);
-    if (timeTaken) doc.text(`Time Taken: ${timeTaken}`, 20, 50);
+}
 
-    let y = 60;
-    doc.text("Your Answers:", 20, y);
-    y += 10;
-    allQuestions.forEach((q: Question, index: number) => {
-      const selectedChoice = choicesForQuestion(q.id)?.find(
-        (c: Choice) => c.id === selectedChoices[q.id]
-      );
-      const correctChoice = choicesForQuestion(q.id)?.find(
-        (c: Choice) => c.is_correct
-      );
-      doc.text(`${index + 1}. ${q.text}`, 20, y, { maxWidth: 160 });
-      y += 10;
-      doc.text(`Your Answer: ${selectedChoice?.text || "Not answered"}`, 30, y);
-      y += 10;
-      doc.text(`Correct Answer: ${correctChoice?.text || "N/A"}`, 30, y);
-      y += 15;
-    });
+const score=quizResult.points
+const totalQuestions=quizResult.total_questions;
+const percentage=totalQuestions>0? (score/totalQuestions)*100:0;
 
-    doc.save(`${quizFile}_results.pdf`);
-  };
 
-  const choicesForQuestion = (questionId: number) => {
-    const { data: choices = [] } = useGetChoicesQuery({
-      category0,
-      category1,
-      quizFile,
-      questionId,
-    });
-    return choices;
-  };
+const responsesMap=quizResult.responses.reduce((acc,resp)=>{
+  acc[resp.question]=resp.selected_choice;
+  return acc;
+},{} as Record<number,number>);
 
-  const handleRetryQuiz = () => {
-    router.push(`/quiz-app/category/${category0}/${category1}/${quizFile}`);
-  };
 
-  const handleFeedbackSubmit = () => {
-    console.log("Feedback submitted:", feedback);
-    setFeedback("");
-    alert("Thank you for your feedback!");
-  };
+const handleRetryQuiz=()=>{
+  router.push(`/quiz-app/category/${category0}/${category1}/${quizFile}`);
+}
 
   return (
     <div className="container mx-auto p-4 lg:p-8">
@@ -174,9 +245,12 @@ export default function QuizResultsPage() {
           </p>
           <div className="mt-4 flex flex-col items-center gap-4">
             <Badge variant="secondary" className="text-lg py-2 px-4">
-              Score: {score}/{maxPossibleScore} ({Math.round(percentage)}%)
+              Score: {score}/{totalQuestions} ({Math.round(percentage)}%)
             </Badge>
-            {timeTaken && <Badge variant="outline">Time Taken: {timeTaken}</Badge>}
+            {/* {timeTaken && <Badge variant="outline">Time Taken: {timeTaken}</Badge>} */}
+
+
+
             <div className="text-sm text-muted-foreground">
               Completed on {new Date().toLocaleDateString()}
             </div>
@@ -195,7 +269,8 @@ export default function QuizResultsPage() {
                 <QuestionResult
                   key={question.id}
                   question={question}
-                  selectedChoiceId={selectedChoices[question.id]}
+                  // selectedChoiceId={selectedChoices[question.id]}
+                  selectedChoiceId={responsesMap[question.id]}
                   category0={category0}
                   category1={category1}
                   quizFile={quizFile}
@@ -206,7 +281,7 @@ export default function QuizResultsPage() {
         </CardContent>
       </Card>
 
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      {/* <div className="flex flex-col md:flex-row gap-4 mb-6">
         <Button onClick={handleRetryQuiz} variant="outline" className="flex-1">
           Retry Quiz
         </Button>
@@ -214,7 +289,7 @@ export default function QuizResultsPage() {
           <Download className="mr-2 h-4 w-4" />
           Export as PDF
         </Button>
-      </div>
+      </div> */}
 
       
     </div>
@@ -261,29 +336,40 @@ function QuestionResult({
     );
   }
 
+  // const correctChoice = choices.find((c: Choice) => c.is_correct);
+  // const correctChoiceId = correctChoice?.id;
+  // const isCorrect = selectedChoiceId === correctChoiceId;
+  // const cardClass = isCorrect
+  //   ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+  //   : selectedChoiceId
+  //   ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+  //   : "border-muted";
+  const selectedChoice = choices.find((c: Choice) => c.id === selectedChoiceId);
   const correctChoice = choices.find((c: Choice) => c.is_correct);
-  const correctChoiceId = correctChoice?.id;
-  const isCorrect = selectedChoiceId === correctChoiceId;
+  const isCorrect = selectedChoiceId === correctChoice?.id;
   const cardClass = isCorrect
     ? "border-green-500 bg-green-50 dark:bg-green-900/20"
     : selectedChoiceId
     ? "border-red-500 bg-red-50 dark:bg-red-900/20"
     : "border-muted";
 
+
   return (
     <Card className={`transition-all ${cardClass}`}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <Badge variant="outline">{question.subject_category_name}</Badge>
-          {isCorrect ? (
-            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+{isCorrect ? (
+            <span className="text-green-600 dark:text-green-400">Correct</span>
           ) : selectedChoiceId ? (
-            <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-          ) : null}
+            <span className="text-red-600 dark:text-red-400">Incorrect</span>
+          ) : (
+            <span className="text-muted-foreground">Not Answered</span>
+          )}
         </div>
         <CardTitle className="text-lg">{question.text}</CardTitle>
       </CardHeader>
-      <CardContent>
+      {/* <CardContent>
         <div className="space-y-2">
           {choices.map((choice: Choice) => {
             const isSelected = choice.id === selectedChoiceId;
@@ -328,7 +414,26 @@ function QuestionResult({
             );
           })}
         </div>
+      </CardContent> */}
+
+
+<CardContent>
+        <div className="space-y-2">
+          <p>
+            <strong>Your Answer:</strong>{" "}
+            {selectedChoice?.text || "Not answered"}
+          </p>
+          <p>
+            <strong>Correct Answer:</strong> {correctChoice?.text || "N/A"}
+          </p>
+          {!isCorrect && selectedChoiceId && (
+            <p className="text-sm text-muted-foreground">
+              You selected an incorrect option.
+            </p>
+          )}
+        </div>
       </CardContent>
+
       <Separator />
     </Card>
   );
