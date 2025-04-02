@@ -158,10 +158,21 @@ export const quizApiSlice = qapiSlice.injectEndpoints({
       }),
     }),
 
-    getQuizResult: builder.query({
-      query: ({ category0, category1, quizFile }) =>
-        `${category0}/${category1}/${quizFile}/result/`,
-    }),
+    // In quizApiSlice.ts
+    // getAllChoicesForQuiz: builder.query<
+    //   Choice[],
+    //   { category0: string; category1: string; quizFile: string }
+    // >({
+    //   query: ({ category0, category1, quizFile }) => ({
+    //     url: `/quiz/${category0}/${category1}/${quizFile}/choices`,
+    //     method: "GET",
+    //   }),
+    // }),
+
+    //it is being  done from localstorage dude
+    // getQuizResult:builder.query({
+    //   query:({category0,category1,quizFile})=>`${category0}/${category1}/${quizFile}/result/`
+    // }),
 
     getLeaderboard: builder.query({
       query: () => "quiz-leaderboard/",
@@ -178,6 +189,6 @@ export const {
   useGetChoicesQuery,
   useGetAllQuestionsQuery,
   useSubmitQuizMutation,
-  useGetQuizResultQuery,
+  // useGetQuizResultQuery,
   useGetLeaderboardQuery,
 } = quizApiSlice;

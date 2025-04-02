@@ -1,5 +1,5 @@
 "use client";
-import { useGetQuizFilesQuery } from "@/redux/features/quizApiSlice";
+import { useGetQuizFilesQuery} from "@/redux/features/quizApiSlice";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";

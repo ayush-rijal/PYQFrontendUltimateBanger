@@ -5,12 +5,13 @@ import CourseCardDemo from "@/dashboard/CourseCard";
 import { TopUsers } from "@/dashboard/TopUser";
 import DashboardTodo from "@/to-do/todo_dashboard";
 import ResultAnalysis from "@/dashboard/components/HoursSpent";
-// import { StudentPerformance } from "@/dashboard/components/performance";
 import { DashboardCalendar } from "@/dashboard/Calendar_dashboard";
-
-// import { cn } from "@/lib/utils";
+import { Lock } from "lucide-react"; // Import lock icon
 
 export default function DashboardPage() {
+  // 🔒 Page Lock Feature
+  const isPublished = false; // Set to `true` to unlock the profile page
+
   return (
     <div className="bg-background  flex flex-col">
       <Header />
@@ -41,7 +42,30 @@ export default function DashboardPage() {
           <h2 className="text-lg font-semibold mb-4 text-foreground">
             Analytics & Schedule
           </h2>
-          <ResultAnalysis />
+          {/* 🔒 Wrapper for Lock Effect */}
+          <div className="relative">
+            {/* Profile Tabs - Apply Blur & Opacity if Locked */}
+            <div
+              className={`${
+                !isPublished ? "opacity-30 blur-md pointer-events-none " : ""
+              } transition-all duration-300`}
+            >
+              <ResultAnalysis />
+            </div>
+
+            {/* 🔒 Lock Overlay - Shows When Page is Locked */}
+            {!isPublished && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-md rounded-lg transition-all hover:bg-white/40 border-amber-900 border-1 ">
+                <div className="flex flex-col items-center text-gray-700">
+                  <Lock className="w-14 h-14 mb-2 text-gray-600 transition-all" />
+                  <p className="text-lg font-semibold">
+                  Analytics & Schedule Page is Locked
+                  </p>
+                  <p className="text-sm">This page is not yet published.</p>
+                </div>
+              </div>
+            )}
+          </div>
         </section>
         {/* Todo Column */}
 
@@ -49,11 +73,9 @@ export default function DashboardPage() {
           Today&apos;s Tasks
         </h2>
         <div className=" p-4">
-        <DashboardTodo />
-          
+          <DashboardTodo />
         </div>
         <h2 className="text-xl md:text-2xl font-semibold mb-4 text-foreground flex items-center gap-2">
-         
           Progress
         </h2>
         <div className=" p-4 ">

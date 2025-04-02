@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import toast from "react-hot-toast";
 import { useParams, useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -33,12 +34,22 @@ import {
   Send,
 } from "lucide-react";
 import Loading from "@/loading/Loading";
+import Image from "next/image";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 interface Question {
   id: number;
   text: string;
   questions_file_title: string;
   subject_category_name: string;
+  image?: string;
 }
 
 interface Choice {
@@ -82,16 +93,15 @@ export default function QuizPage() {
 
   const questions = questionsData?.results || [];
   const totalCount = questionsData?.count || 0;
-  const pageSize = 5; // Set a constant page size
-  
-  if(questions.length > pageSize) {
+  const pageSize = 5;
+
+  if (questions.length > pageSize) {
     console.warn(
       `Expected ${pageSize} questions, but got ${questions.length}. This might be due to pagination.`
-    )
+    );
   }
 
   const totalPages = Math.ceil(totalCount / pageSize);
-
   const answeredCount = Object.keys(selectedChoices).length;
   const progressPercentage =
     totalCount > 0 ? (answeredCount / totalCount) * 100 : 0;
@@ -109,7 +119,7 @@ export default function QuizPage() {
     const questionIndex = allQuestions.findIndex((q) => q.id === questionId);
     const newPage = Math.floor(questionIndex / pageSize) + 1;
     setCurrentPage(newPage);
-    setHighlightedQuestionId(questionId); // Still set it, but effect will validate
+    setHighlightedQuestionId(questionId);
     setActiveTab("questions");
   };
 
@@ -120,29 +130,45 @@ export default function QuizPage() {
     }));
   };
 
-  const [submitQuiz, { isLoading: submitLoading, error: submitError }] =
-    useSubmitQuizMutation();
+  const [submitQuiz, { isLoading: submitLoading }] = useSubmitQuizMutation();
 
   const handleSubmitQuiz = async () => {
-    const Choice = Object.fromEntries(
-      Object.entries(selectedChoices).map(([qId, cId]) => [qId, cId])
-    );
-    const paylaod = {
+    const choices = Object.fromEntries(Object.entries(selectedChoices));
+    const payload = {
       category0,
       category1,
       quizFile,
+      choices,
       is_submitted: true,
-      Choice}
+    };
     try {
-      const result = await submitQuiz(paylaod).unwrap();
-      console.log("Submitted successfully:", result);
-      setSelectedChoices({}); // Reset choices after submission
+      const result = await submitQuiz(payload).unwrap();
       const quizId = uuidv4();
+      toast.success("Quiz submitted successfully!");
+      localStorage.setItem(
+        `quizResult_${quizId}`,
+        JSON.stringify({
+          status: "quiz submitted",
+          points: result.points,
+          total_questions: allQuestions.length,
+          responses: Object.entries(choices).map(([qId, cId]) => ({
+            question: Number(qId),
+            selected_choice: cId,
+            is_submitted: true,
+          })),
+        })
+      );
       router.push(
         `/quiz-app/category/${category0}/${category1}/${quizFile}/results/${quizId}`
       );
     } catch (err) {
-      console.error("Submission failed:", err);
+      console.error(
+        "Failed to submit quiz. Please select an option before proceeding.",
+        err
+      );
+      toast.error(
+        "Failed to submit quiz. Please select an option before proceeding."
+      );
     }
   };
 
@@ -164,7 +190,6 @@ export default function QuizPage() {
     );
   }
 
-  // Use the questions fetched for the current page
   const displayedQuestions = questions;
 
   return (
@@ -172,12 +197,31 @@ export default function QuizPage() {
       <header className="mb-8">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="text-center md:text-left">
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-              {quizFile}
-            </h1>
-            <p className="text-muted-foreground">
-              {category0} / {category1}
-            </p>
+            <Breadcrumb className="mb-4">
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink href="/quiz-app">All Quizzes</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink href={`/quiz-app/category/${category0}`}>
+                    {category0}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink
+                    href={`/quiz-app/category/${category0}/${category1}`}
+                  >
+                    {category1}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{quizFile}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="px-3 py-1">
@@ -211,14 +255,13 @@ export default function QuizPage() {
                 Navigation
               </TabsTrigger>
             </TabsList>
-
             <TabsContent value="navigation" className="mt-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Question Navigator</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[60vh]">
+                  <ScrollArea className="h-[100vh]">
                     {Object.entries(groupedQuestions).map(([subject, qs]) => (
                       <div key={subject} className="mb-6">
                         <h4 className="mb-2 font-medium">
@@ -254,7 +297,6 @@ export default function QuizPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-
             <TabsContent value="questions" className="mt-4">
               <QuestionsContent
                 questions={displayedQuestions}
@@ -370,15 +412,31 @@ function QuestionsContent({
   onSubmit,
   submitLoading,
 }: QuestionsContentProps) {
+  const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Auto-scroll to highlighted question when it changes
+  useEffect(() => {
+    if (highlightedQuestionId) {
+      const index = questions.findIndex((q) => q.id === highlightedQuestionId);
+      if (index !== -1 && questionRefs.current[index]) {
+        questionRefs.current[index]?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }
+  }, [highlightedQuestionId, questions]);
+
   return (
     <div className="flex flex-col gap-6">
-      <ScrollArea className="h-[calc(100vh-16rem)]">
+      <ScrollArea className="h-[calc(100vh)]">
         <div className="space-y-6 p-2">
           {questions.map((question, index) => {
             const questionNumber = (currentPage - 1) * 5 + index + 1;
             return (
               <Card
                 key={question.id}
+                ref={(el) => (questionRefs.current[index] = el)} // Assign ref to each card
                 className={`transition-all hover:shadow-md ${
                   question.id === highlightedQuestionId
                     ? "border-2 border-primary bg-primary/5"
@@ -395,6 +453,24 @@ function QuestionsContent({
                     </Badge>
                   </div>
                   <CardTitle className="text-xl">{question.text}</CardTitle>
+                  <div
+                    className={`mt-2 transition-all duration-300 ${
+                      question.image ? "h-auto" : "h-0 overflow-hidden"
+                    }`}
+                  >
+                    {question.image ? (
+                      <div className="relative w-full max-w-md mx-auto">
+                        <Image
+                          src={question.image}
+                          alt={`Image for question ${questionNumber}`}
+                          width={400}
+                          height={300}
+                          className="rounded-md object-contain"
+                          loading="lazy"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <Choices
@@ -420,7 +496,7 @@ function QuestionsContent({
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((prev) => prev - 1)}
-              disabled={currentPage === 1}
+              disabled={currentPage === 1 || submitLoading}
               className="gap-1"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -433,7 +509,7 @@ function QuestionsContent({
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((prev) => prev + 1)}
-              disabled={currentPage === totalPages}
+              disabled={currentPage === totalPages || submitLoading}
               className="gap-1"
             >
               Next
@@ -444,13 +520,14 @@ function QuestionsContent({
             variant="default"
             onClick={onSubmit}
             className="w-full sm:w-auto"
+            disabled={submitLoading}
           >
             {submitLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Send className="mr-2 h-4 w-4" />
             )}
-            Submit Quiz
+            {submitLoading ? "Submitting..." : "Submit Quiz"}
           </Button>
         </CardFooter>
       </Card>

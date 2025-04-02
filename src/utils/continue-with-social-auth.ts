@@ -1,4 +1,4 @@
-import { toast } from 'react-toastify';
+import toast from "react-hot-toast";
 
 export default async function continueWithSocialAuth(
 	provider: string,
@@ -27,7 +27,8 @@ export default async function continueWithSocialAuth(
 		} else {
 			toast.error('Something went wrong');
 		}
-	} catch (err) {
+	} catch (error) {
+		console.error('Error:', error);
 		toast.error('Something went wrong');
 	}
 }

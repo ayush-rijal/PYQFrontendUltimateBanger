@@ -97,9 +97,9 @@ export default function Navbar() {
           <Button
             asChild
             variant="secondary"
-            className="rounded-xl font-medium px-6"
+            className="rounded-xl font-medium px-6 hidden "
           >
-            {/* <Link href="/auth/login">Open</Link> */}
+            <Link href="/auth/login">Open</Link>
           </Button>
 
           <Button
@@ -153,7 +153,7 @@ export default function Navbar() {
             <Button
               asChild
               variant="secondary"
-              className="w-full rounded-xl"
+              className="w-full rounded-xl hidden"
               onClick={() => setIsMenuOpen(false)}
             >
               <Link href="/login">Log In</Link>
@@ -168,7 +168,7 @@ export default function Navbar() {
               )}
               onClick={() => setIsMenuOpen(false)}
             >
-              <Link href="/signup">Sign Up</Link>
+              <Link href="/auth/login">Open Dashboard</Link>
             </Button>
           </div>
         </div>

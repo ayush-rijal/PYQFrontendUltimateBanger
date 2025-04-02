@@ -2,9 +2,17 @@ import { useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppDispatch } from '@/redux/hooks';
 import { setAuth } from '@/redux/features/authSlice';
-import { toast } from 'react-toastify';
+import toast from "react-hot-toast";
 
-export default function useSocialAuth(authenticate: any, provider: string) {
+interface AuthenticateParams {
+  provider: string;
+  state: string;
+  code: string;
+}
+
+type AuthenticateFunction = (params: AuthenticateParams) => { unwrap: () => Promise<void> };
+
+export default function useSocialAuth(authenticate: AuthenticateFunction, provider: string) {
 	const dispatch = useAppDispatch();
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -32,7 +40,7 @@ export default function useSocialAuth(authenticate: any, provider: string) {
 		return () => {
 			effectRan.current = true;
 		};
-	}, [authenticate, provider]);
+	}, [authenticate, provider, dispatch, router, searchParams]);
 }
 
 
