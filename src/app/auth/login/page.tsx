@@ -70,7 +70,7 @@ export default function Page() {
         className="mt-10 sm:mx-auto sm:w-full sm:max-w-md"
         aria-label="Login Form"
       >
-        <div className="bg-white text-white dark:text-white dark:bg-gray-800 py-8 px-6 shadow-xl rounded-xl sm:px-10 border border-gray-200 dark:border-gray-700 text-center itmes-center">
+        <div className="bg-white text-white dark:text-white dark:bg-gray-800 py-8 px-6 shadow-xl rounded-xl sm:px-10 border border-gray-200 dark:border-gray-700 text-center itmes-center justify-center">
           <div className="hidden">
             <LoginForm />
           </div>
@@ -89,7 +89,7 @@ export default function Page() {
 
         {/* Register Link */}
         <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400 hidden">
-          Don’t have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link
             href="/auth/register"
             className="font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors duration-200"

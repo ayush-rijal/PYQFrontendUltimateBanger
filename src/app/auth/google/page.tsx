@@ -6,11 +6,15 @@ import { Spinner } from '@/components/common';
 
 export default function Page() {
 	const [googleAuthenticate] = useSocialAuthenticateMutation();
-	useSocialAuth(googleAuthenticate, 'google-oauth2');
+	useSocialAuth((...args) => ({
+		unwrap: async () => {
+			await googleAuthenticate(...args).unwrap();
+		},
+	}), 'google-oauth2');
 
 	return (
 		<div className='my-8'>
-			<Spinner lg />
+			<Spinner  />
 		</div>
 	);
 }
