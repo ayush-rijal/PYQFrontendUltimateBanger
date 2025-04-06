@@ -10,6 +10,7 @@ interface Category1 {
   name: string;
 }
 
+
 interface QuestionsFile {
   title: string;
   category0: number;
