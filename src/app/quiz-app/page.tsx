@@ -1,5 +1,5 @@
 "use client";
-import { useGetCategory0Query } from "@/redux/features/quizApiSlice";
+import { useGetRootCategoriesQuery } from "@/redux/features/quizApiSlice";
 import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -18,7 +18,7 @@ interface CategoryCardProps {
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
-  const { data: categories, isLoading, error } = useGetCategory0Query();
+  const { data: categories, isLoading, error } = useGetRootCategoriesQuery();
 
   // Variant styles for light and dark modes
   const variantStyles = {

@@ -1,20 +1,20 @@
+import { number, string } from "zod";
 import { qapiSlice } from "../services/qapiSlice";
 import { baseQuery } from "../services/qapiSlice";
 
 // Types for quizapi
-interface Category0 {
-  name: string;
-}
+interface Category{
+  name:string;
+  id:number;
+  level:number;
+  children:Category[];  //Nested children
 
-interface Category1 {
-  name: string;
 }
-
 
 interface QuestionsFile {
   title: string;
-  category0: number;
-  category1: number;
+  description:string;
+  category:string; //Slug field (name of the category)
   created_at: string;
 }
 
@@ -23,8 +23,6 @@ interface Question {
   text: string;
   questions_file_title: string;
   subject_category_name: string;
-  correct_choice_id?: number;
-  choices?: Choice[];
 }
 
 interface Choice {
@@ -42,10 +40,15 @@ interface QuestionsResponse {
 }
 
 interface QuizResult {
-  id: number;
-  score: number;
-  total_questions: number;
-  completed_at: string;
+  questions_file:string; //Title fo the questions file
+  points:number;
+  completed_at:string | null;
+}
+
+interface LeaderboardEntry{
+  username:string;
+  total_points:number;
+  last_updated:string;
 }
 
 // Fetch all questions for sidebar with proper error typing
@@ -75,35 +78,36 @@ const fetchAllQuestions = async (
 // Extend qapiSlice with quiz-specific endpoints
 export const quizApiSlice = qapiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    // Fetch all Category0 entries
-    getCategory0: builder.query<Category0[], void>({
-      query: () => "/category0/",
+    //Fetch all root categories
+    getRootCategories:builder.query<Category[],void>({
+      query:()=>'/categories/',
+
     }),
 
-    // Fetch Category1 entries for a given Category0
-    getCategory1: builder.query<Category1[], string>({
-      query: (category0) => `/${category0}/`,
+    // Fetch children of a category by category path
+    getCategoryChildren: builder.query<Category[], string>({
+      query: (categoryPath) => `/${categoryPath}/`,
     }),
 
-    // Fetch quiz files for a Category0 and Category1
+    // Fetch quiz files for a category path
     getQuizFiles: builder.query<
       QuestionsFile[],
-      { category0: string; category1: string }
+      string
     >({
-      query: ({ category0, category1 }) => `/${category0}/${category1}/`,
+      query: (categoryPath) => `/${categoryPath}/files/`,
     }),
 
-    // Fetch all questions without pagination
+    // Fetch all questions for a quiz file without pagination
     getAllQuestions: builder.query<
       Question[],
-      { category0: string; category1: string; quizFile: string }
+      { categoryPath:string, questionsFile:string }
     >({
       queryFn: async (
-        { category0, category1, quizFile },
+        { categoryPath,questionsFile },
         api,
         extraOptions
       ) => {
-        const initialUrl = `/${category0}/${category1}/${quizFile}/`;
+        const initialUrl = `/${categoryPath}/${questionsFile}/`;
         try {
           const allQuestions = await fetchAllQuestions(
             initialUrl,
@@ -125,71 +129,89 @@ export const quizApiSlice = qapiSlice.injectEndpoints({
     // Fetch paginated questions
     getQuestions: builder.query<
       QuestionsResponse,
-      { category0: string; category1: string; quizFile: string; page?: number }
+      { categoryPath:string; questionsFile:string; page?:number }
     >({
-      query: ({ category0, category1, quizFile, page = 1 }) =>
-        `/${category0}/${category1}/${quizFile}/?page=${page}`,
+      query: ({ categoryPath,questionsFile, page = 1 }) =>
+        `/${categoryPath}/${questionsFile}/?page=${page}`,
     }),
+
+    //Fetch single questions
+    getQuestion:builder.query<
+    Question,
+    {categoryPath:string;questionsFile:string;questionId:number}>({
+      query:({categoryPath,questionsFile,questionId})=>
+        `/${categoryPath}/${questionsFile}/question/${questionId}/`
+    }),
+
+
+
 
     // Fetch choices for a specific question
     getChoices: builder.query<
       Choice[],
       {
-        category0: string;
-        category1: string;
-        quizFile: string;
+        categoryPath:string;
+        questionsFile:string;
         questionId: number;
       }
     >({
-      query: ({ category0, category1, quizFile, questionId }) =>
-        `/${category0}/${category1}/${quizFile}/${questionId}/choices/`,
+      query: ({ categoryPath,questionsFile, questionId }) =>
+        `/${categoryPath}/${questionsFile}/question/${questionId}/choices/`,
     }),
 
-    submitQuiz: builder.mutation({
+    // Submit quiz
+    submitQuiz: builder.mutation<
+    {status:string; 
+    points:number;
+    total_questions:number;
+    responses:any[]},
+    {
+      categoryPath:string;
+      questionsFile:string;
+      choices:Record<number,number>;//{question_id:choice_id}
+      is_submitted?:boolean; 
+    }
+    >(
+      {
       query: ({
-        category0,
-        category1,
-        quizFile,
+        categoryPath,
+        questionsFile,
         choices,
         is_submitted = true,
       }) => ({
-        url: `${category0}/${category1}/${quizFile}/submit/`,
+        url: `${categoryPath}/${questionsFile}/submit/`,
         method: "POST",
         body: { choices, is_submitted },
       }),
     }),
 
-    // In quizApiSlice.ts
-    // getAllChoicesForQuiz: builder.query<
-    //   Choice[],
-    //   { category0: string; category1: string; quizFile: string }
-    // >({
-    //   query: ({ category0, category1, quizFile }) => ({
-    //     url: `/quiz/${category0}/${category1}/${quizFile}/choices`,
-    //     method: "GET",
-    //   }),
-    // }),
+    //Fetch quiz result
+    getQuizResult:builder.query<
+    QuizResult,
+    {categoryPath:string; questionsFile:string}
+    >({
+      query:({categoryPath,questionsFile})=>
+        `/${categoryPath}/${questionsFile}/result/`
+    }),
 
-    //it is being  done from localstorage dude
-    // getQuizResult:builder.query({
-    //   query:({category0,category1,quizFile})=>`${category0}/${category1}/${quizFile}/result/`
-    // }),
 
+    //Fetch leaderboard
     getLeaderboard: builder.query({
-      query: () => "quiz-leaderboard/",
+      query: () => "leaderboard/",
     }),
   }),
 });
 
 // Export all hooks
 export const {
-  useGetCategory0Query,
-  useGetCategory1Query,
+  useGetRootCategoriesQuery,
+  useGetCategoryChildrenQuery,
   useGetQuizFilesQuery,
-  useGetQuestionsQuery,
-  useGetChoicesQuery,
   useGetAllQuestionsQuery,
+  useGetQuestionsQuery,
+  useGetQuestionQuery,
+  useGetChoicesQuery,
   useSubmitQuizMutation,
-  // useGetQuizResultQuery,
+  useGetQuizResultQuery,
   useGetLeaderboardQuery,
 } = quizApiSlice;

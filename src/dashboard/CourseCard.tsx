@@ -1,5 +1,5 @@
 "use client";
-import { useGetCategory0Query } from "@/redux/features/quizApiSlice";
+import { useGetRootCategoriesQuery } from "@/redux/features/quizApiSlice";
 import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -11,7 +11,7 @@ interface CategoryCardProps {
 }
 
 export default function CourseCardDemo() {
-  const { data: categories, isLoading, error } = useGetCategory0Query();
+  const { data: categories, isLoading, error } = useGetRootCategoriesQuery();
 
   // Variant styles for light and dark modes
   const variantStyles = {

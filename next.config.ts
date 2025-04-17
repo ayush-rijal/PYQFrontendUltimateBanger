@@ -3,10 +3,16 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: false,
   images: {
-    domains: ["lh3.googleusercontent.com"],
+    domains: ["lh3.googleusercontent.com", "localhost"],
   },
-  
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: "/media/:path*",
+        destination: "http://localhost:8000/media/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
