@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/dashboard/components/app-sidebar";
 import { RequireAuth } from "@/components/utils";
 
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <RequireAuth>
@@ -25,6 +26,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {children}
           </main>
         </div>
+        {/* <Aimessage/> */}
       </SidebarProvider>
     </RequireAuth>
   );

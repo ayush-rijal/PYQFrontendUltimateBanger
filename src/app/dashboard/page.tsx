@@ -10,7 +10,7 @@ import { Lock } from "lucide-react"; // Import lock icon
 
 export default function DashboardPage() {
   // 🔒 Page Lock Feature
-  const isPublished = false; // Set to `true` to unlock the profile page
+  const isPublished = true; // Set to `true` to unlock the profile page
 
   return (
     <div className="bg-background  flex flex-col">

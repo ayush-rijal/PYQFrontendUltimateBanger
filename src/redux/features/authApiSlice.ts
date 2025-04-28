@@ -35,6 +35,8 @@ interface GlobalLeaderboardEntry {
   total_score: number;
 }
 
+
+
 const authApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     retrieveUser: builder.query<User, void>({

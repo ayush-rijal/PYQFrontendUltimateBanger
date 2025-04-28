@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Provider from "@/redux/provider";
 import { Setup } from "@/components/utils";
 import  { Toaster } from 'react-hot-toast';
+import  Aimessage  from "@/components/chatAi/tai";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,8 +26,10 @@ export default function RootLayout({
 
           <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8 my-8">
             {children}
-            <Toaster position="top-center"/>
+            <Aimessage/>
+            <Toaster/>
           </div>
+
         </Provider>
       </body>
     </html>
