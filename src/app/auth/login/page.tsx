@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LoginForm } from "@/components/forms";
 import { SocialButtons } from "@/components/common";
 import type { Metadata } from "next";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "Login to PYQ | Sign In to Your Quiz Account",
@@ -47,9 +48,14 @@ export default function Page() {
       >
         {/* Logo */}
         <div className="flex justify-center">
-          <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-            <span className="sr-only">PYQ Logo</span>
-            PYQ
+          <div className="w-16 h-16 bg-amber-700 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+            <Image
+              src="/logo.svg"
+              alt="PYQ Logo"
+              width={92}
+              height={92}
+              className="w-16 h-16 rounded-full"
+            />
           </div>
         </div>
 
@@ -80,7 +86,7 @@ export default function Page() {
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400 ">
-               Sign-Up with
+                Sign-Up with
               </span>
             </div>
           </div>

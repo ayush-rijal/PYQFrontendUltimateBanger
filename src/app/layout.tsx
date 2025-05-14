@@ -9,7 +9,7 @@ import  Aimessage  from "@/components/chatAi/tai";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "PYQ-arun",
+  title: "PYQ-Past Year Questions",
   description: "Full Auth application that provides jwt authentication",
 };
 
@@ -27,7 +27,7 @@ export default function RootLayout({
           <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8 my-8">
             {children}
             <Aimessage/>
-            <Toaster/>
+            <Toaster position="top-center"/>
           </div>
 
         </Provider>

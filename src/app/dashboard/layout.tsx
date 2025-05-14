@@ -14,7 +14,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <AppSidebar />
 
           {/* Mobile Header with Toggle Button */}
-          <header className="md:hidden flex items-center justify-between p-4  rounded-4xl hover:bg-green-400 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+          <header className="md:hidden flex items-center justify-between p-4  rounded-4xl bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
             <h1 className="text-lg font-semibold text-amber-900 dark:text-white cursor-pointer">
               Expore Sidebar
             </h1>
@@ -31,3 +31,5 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     </RequireAuth>
   );
 }
+
+
